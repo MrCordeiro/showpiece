@@ -27,6 +27,7 @@ describe("configSchema", () => {
     expect(parsed.publish.track).toBe("listing");
     expect(parsed.screens[0]?.caption).toBe("");
     expect(parsed.screenshotsDir).toBe(".vitrine/screenshots");
+    expect(parsed.appearance).toBe("light");
   });
 
   it("accepts a solid background color", () => {
@@ -52,6 +53,19 @@ describe("configSchema", () => {
       frame: { template: "neon", background: "#101010" },
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts a dark appearance", () => {
+    const parsed = configSchema.parse({ ...base, appearance: "dark" });
+    expect(parsed.appearance).toBe("dark");
+  });
+
+  it("rejects an unknown appearance", () => {
+    const result = configSchema.safeParse({ ...base, appearance: "sepia" });
+    expect(result.success).toBe(false);
+    expect(result.success ? [] : result.error.issues[0]?.path).toEqual([
+      "appearance",
+    ]);
   });
 
   it("rejects a malformed background color", () => {

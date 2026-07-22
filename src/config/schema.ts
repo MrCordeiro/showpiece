@@ -11,6 +11,9 @@ const hexColor = z
 export const frameTemplateSchema = z.enum(["gradient", "solid", "minimal"]);
 export type FrameTemplate = z.infer<typeof frameTemplateSchema>;
 
+export const appearanceSchema = z.enum(["light", "dark"]);
+export type Appearance = z.infer<typeof appearanceSchema>;
+
 export const screenSchema = z.object({
   /** Stable screen id; must equal the flow's `takeScreenshot` name. */
   id: z.string().min(1, "screen id must not be empty"),
@@ -58,6 +61,14 @@ export const configSchema = z.object({
     .string()
     .min(1, "screenshotsDir must not be empty")
     .default(".vitrine/screenshots"),
+  /**
+   * System UI mode the device is put into before capturing. `"dark"` also
+   * suffixes every output file with `-dark`, so both appearances can coexist
+   * in one output dir. Requires the app itself to follow the system
+   * appearance (Expo: `userInterfaceStyle: "automatic"` — the Expo default is
+   * `"light"`, which ignores the system setting entirely).
+   */
+  appearance: appearanceSchema.default("light"),
   screens: z
     .array(screenSchema)
     .min(1, "at least one screen is required")
