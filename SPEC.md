@@ -99,6 +99,8 @@ export default defineConfig({
 
 `appearance` (optional, defaults to `"light"`) is the system UI mode the device is put into before capturing, via `adb shell cmd uimode night`. A dark run writes `<screenshotsDir>/raw/<id>-dark.png` instead of `<id>.png`, so both appearances coexist in one directory; `frame` and `publish` follow the same convention. `--appearance <light|dark>` overrides the config for a single run, and the device's previous night mode is restored afterwards. This only affects the captured pixels if the app under test follows the system appearance (Expo: `userInterfaceStyle: "automatic"`).
 
+`<screenshotsDir>/raw/` is a persistent store keyed by screen id + appearance, not a per-run output directory. A run may only write `raw/<id>[-dark].png` for a screen it captured, and remove that same path when that screen's flow failed (so `frame`/`publish` can never read an image no successful capture produced). It never touches another screen's file or the same screen's other appearance — so `--only` and single-appearance runs are additive. `capture --clean` is the only way to empty the directory, for cases like orphaned PNGs left behind by a renamed screen id.
+
 Example Maestro flow (`.vitrine/flows/home.yaml`):
 
 ```yaml
@@ -121,8 +123,9 @@ Convention: each flow's `takeScreenshot` name must match the screen `id`. `captu
 - [x] If `apkPath` is set, installs it (`adb install -r`); otherwise verifies the package is installed and errors helpfully if not.
 - [x] Runs each screen's Maestro flow sequentially; collects PNGs into `.vitrine/screenshots/raw/<id>.png`.
 - [x] `appearance: "light" | "dark"` (plus `--appearance`) sets the device UI mode for the run, suffixes dark output with `-dark`, and restores the device's prior mode.
-- [ ] `--only <id,id>` flag to capture a subset.
-- [ ] Non-zero exit code and a summary table (captured / failed) at the end.
+- [x] `--only <id,id>` flag to capture a subset.
+- [x] `raw/` accumulates across runs: a run only writes/removes the paths of the screens it attempted; `--clean` is the only bulk delete.
+- [x] Non-zero exit code and a summary table (captured / failed) at the end.
 - [ ] Agents can easily troubleshoot and update failing flows.
 
 ### P0 — `frame`

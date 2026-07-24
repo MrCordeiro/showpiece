@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { parseAllDocuments } from "yaml";
 import type { Appearance, ScreenConfig } from "../config/schema.js";
@@ -82,10 +82,12 @@ export interface RunFlowOptions {
  * Run a single Maestro flow and return the path to the resulting PNG —
  * `<rawDir>/<id>.png`, or `<rawDir>/<id>-dark.png` on a dark run.
  *
- * Maestro writes `takeScreenshot: <id>` relative to its working directory, so
- * we run it with `cwd = rawDir`; a correctly-named screenshot lands exactly
- * where we want it, and dark runs are renamed afterwards. We never run
- * `maestro test` on a directory.
+ * Maestro always writes `takeScreenshot: <id>` as `<id>.png` relative to its
+ * working directory, so we run it in a throwaway staging directory and move the
+ * result to the appearance-specific output path.
+ *
+ * The staging dir lives inside `rawDir` so the final `rename` stays on one
+ * filesystem (`os.tmpdir()` can be another volume, which fails with EXDEV).
  */
 export async function runFlow(
   screen: ScreenConfig,
@@ -95,37 +97,38 @@ export async function runFlow(
   assertFlowConvention(flowText, screen);
 
   await mkdir(options.rawDir, { recursive: true });
+  const stagingDir = await mkdtemp(join(options.rawDir, ".vitrine-"));
 
-  // Maestro always writes `<id>.png` — the flow's takeScreenshot name, which
-  // we've just validated equals the screen id. Clear any leftover from a
-  // previous run first, so the existence check below can't be satisfied by a
-  // stale file and relabel it as this run's capture in the wrong appearance.
-  // Also clear the resolved output path (e.g. `<id>-dark.png`) so a failed
-  // run doesn't leave a stale file from a previous successful run behind.
-  const captured = join(options.rawDir, `${screen.id}.png`);
   const output = join(
     options.rawDir,
     outputFileName(screen.id, options.appearance),
   );
-  await rm(captured, { force: true });
-  if (output !== captured) {
-    await rm(output, { force: true });
-  }
 
-  await run("maestro", ["--device", options.serial, "test", screen.flow], {
-    cwd: options.rawDir,
-    stdio: "inherit",
-  });
+  try {
+    await run("maestro", ["--device", options.serial, "test", screen.flow], {
+      cwd: stagingDir,
+      stdio: "inherit",
+    });
 
-  if (!existsSync(captured)) {
-    throw new Error(
-      `Flow completed but ${screen.id}.png was not produced in ${options.rawDir}. ` +
-        `Confirm the flow calls \`takeScreenshot: ${screen.id}\`.`,
-    );
-  }
+    const captured = join(stagingDir, `${screen.id}.png`);
+    if (!existsSync(captured)) {
+      throw new Error(
+        `Flow completed but ${screen.id}.png was not produced. ` +
+          `Confirm the flow calls \`takeScreenshot: ${screen.id}\`.`,
+      );
+    }
 
-  if (output !== captured) {
     await rename(captured, output);
+  } catch (error) {
+    // A failed screen must not leave the previous run's PNG behind: `frame` and
+    // `publish` read this directory by convention and would otherwise ship an
+    // image that no successful capture produced. Only this screen's resolved
+    // path is removed - the other appearance's file is untouched.
+    await rm(output, { force: true });
+    throw error;
+  } finally {
+    await rm(stagingDir, { recursive: true, force: true });
   }
+
   return output;
 }

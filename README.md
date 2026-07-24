@@ -162,6 +162,7 @@ npx vitrine capture                       # capture every configured screen
 npx vitrine capture --only home,profile   # capture a subset
 npx vitrine capture --serial emulator-5554  # target a specific device
 npx vitrine capture --appearance dark      # capture in dark mode
+npx vitrine capture --clean               # empty raw/ first (e.g. to drop orphans)
 npx vitrine capture --config ./path/to/vitrine.config.ts
 ```
 
@@ -178,6 +179,10 @@ What it does:
 6. Prints a summary table and exits non-zero if any screen failed.
 
 Capture works against **any installed build** — never a production build.
+
+`raw/` accumulates across runs. A run only writes the PNGs for the screens it
+captured, and only removes a PNG when that screen's own flow failed (so `frame`
+and `publish` never pick up an image no successful capture produced).
 
 ## Capturing a Metro-backed debug build
 
@@ -238,7 +243,7 @@ Dark-mode screenshots are saved with a `-dark` suffix, so both sets coexist:
 .vitrine/screenshots/raw/home-dark.png   # dark
 ```
 
-Capturing both is two runs against the same config:
+Capturing both is two runs against the same config, in either order — the second run adds its own files without disturbing the first run's:
 
 ```bash
 npx vitrine capture --appearance light

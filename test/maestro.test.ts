@@ -79,6 +79,9 @@ vi.mock("node:fs", () => ({ existsSync: vi.fn(() => true) }));
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(async () => "appId: x\n---\n- takeScreenshot: home"),
   mkdir: vi.fn(async () => undefined),
+  // Real mkdtemp appends six random characters to the prefix; a fixed suffix
+  // keeps the staged paths predictable here.
+  mkdtemp: vi.fn(async (prefix: string) => `${prefix}abc123`),
   rm: vi.fn(async () => undefined),
   rename: vi.fn(async () => undefined),
 }));
@@ -86,30 +89,78 @@ vi.mock("../src/util/exec.js", () => ({
   run: vi.fn(async () => ({ stdout: "" })),
 }));
 
+const rawDir = "/tmp/raw";
+const staging = `${join(rawDir, ".vitrine-")}abc123`;
+
 describe("runFlow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("invokes maestro with the device and returns the raw png path", async () => {
+  it("runs maestro in a staging dir, not the raw output dir", async () => {
     const { runFlow } = await import("../src/capture/maestro.js");
     const { run } = await import("../src/util/exec.js");
 
-    const rawDir = "/tmp/raw";
     const out = await runFlow(screen(), {
       rawDir,
       serial: "emulator-5554",
       appearance: "light",
     });
 
-    // Built via the same platform-native `join` the implementation uses —
-    // path.join's separator is OS-dependent, so a hardcoded POSIX literal
-    // here would fail on Windows even though the implementation is correct.
     expect(out).toBe(join(rawDir, "home.png"));
     expect(run).toHaveBeenCalledWith(
       "maestro",
       ["--device", "emulator-5554", "test", "flows/home.yaml"],
-      expect.objectContaining({ cwd: rawDir }),
+      expect.objectContaining({ cwd: staging }),
+    );
+  });
+
+  it("moves the staged capture to the light output path", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rename } = await import("node:fs/promises");
+
+    await runFlow(screen(), {
+      rawDir,
+      serial: "emulator-5554",
+      appearance: "light",
+    });
+
+    expect(rename).toHaveBeenCalledWith(
+      join(staging, "home.png"),
+      join(rawDir, "home.png"),
+    );
+  });
+
+  it("moves the staged capture to a -dark path on a dark run", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rename } = await import("node:fs/promises");
+
+    const out = await runFlow(screen(), {
+      rawDir,
+      serial: "emulator-5554",
+      appearance: "dark",
+    });
+
+    expect(out).toBe(join(rawDir, "home-dark.png"));
+    expect(rename).toHaveBeenCalledWith(
+      join(staging, "home.png"),
+      join(rawDir, "home-dark.png"),
+    );
+  });
+
+  it("never touches the light capture on a successful dark run", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rm } = await import("node:fs/promises");
+
+    await runFlow(screen(), {
+      rawDir,
+      serial: "emulator-5554",
+      appearance: "dark",
+    });
+
+    expect(rm).not.toHaveBeenCalledWith(
+      join(rawDir, "home.png"),
+      expect.anything(),
     );
   });
 
@@ -120,72 +171,82 @@ describe("runFlow", () => {
 
     await expect(
       runFlow(screen(), {
-        rawDir: "/tmp/raw",
+        rawDir,
         serial: "emulator-5554",
         appearance: "light",
       }),
     ).rejects.toThrow(/was not produced/);
   });
 
-  it("renames the capture to a -dark path on a dark run", async () => {
-    const { runFlow } = await import("../src/capture/maestro.js");
-    const { rename } = await import("node:fs/promises");
-
-    const rawDir = "/tmp/raw";
-    const out = await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
-      appearance: "dark",
-    });
-
-    expect(out).toBe(join(rawDir, "home-dark.png"));
-    expect(rename).toHaveBeenCalledWith(
-      join(rawDir, "home.png"),
-      join(rawDir, "home-dark.png"),
-    );
-  });
-
-  it("does not rename on a light run", async () => {
-    const { runFlow } = await import("../src/capture/maestro.js");
-    const { rename } = await import("node:fs/promises");
-
-    await runFlow(screen(), {
-      rawDir: "/tmp/raw",
-      serial: "emulator-5554",
-      appearance: "light",
-    });
-
-    expect(rename).not.toHaveBeenCalled();
-  });
-
-  it("removes a stale capture before running maestro", async () => {
+  it("removes only the failed screen's own output when the flow fails", async () => {
+    const { run } = await import("../src/util/exec.js");
+    vi.mocked(run).mockRejectedValueOnce(new Error("maestro exited 1"));
     const { runFlow } = await import("../src/capture/maestro.js");
     const { rm } = await import("node:fs/promises");
 
-    const rawDir = "/tmp/raw";
-    await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
-      appearance: "light",
-    });
+    await expect(
+      runFlow(screen(), {
+        rawDir,
+        serial: "emulator-5554",
+        appearance: "dark",
+      }),
+    ).rejects.toThrow(/maestro exited 1/);
 
-    expect(rm).toHaveBeenCalledWith(join(rawDir, "home.png"), { force: true });
-  });
-
-  it("removes both the bare and -dark stale captures before running maestro on a dark run", async () => {
-    const { runFlow } = await import("../src/capture/maestro.js");
-    const { rm } = await import("node:fs/promises");
-
-    const rawDir = "/tmp/raw";
-    await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
-      appearance: "dark",
-    });
-
-    expect(rm).toHaveBeenCalledWith(join(rawDir, "home.png"), { force: true });
+    // The failed dark capture is cleared so `frame`/`publish` can't ship a PNG
+    // no successful run produced — but the light capture must survive.
     expect(rm).toHaveBeenCalledWith(join(rawDir, "home-dark.png"), {
       force: true,
     });
+    expect(rm).not.toHaveBeenCalledWith(
+      join(rawDir, "home.png"),
+      expect.anything(),
+    );
+  });
+
+  it("removes the output when the flow produced no png", async () => {
+    const fs = await import("node:fs");
+    vi.mocked(fs.existsSync).mockReturnValueOnce(false);
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rm } = await import("node:fs/promises");
+
+    await expect(
+      runFlow(screen(), {
+        rawDir,
+        serial: "emulator-5554",
+        appearance: "light",
+      }),
+    ).rejects.toThrow(/was not produced/);
+
+    expect(rm).toHaveBeenCalledWith(join(rawDir, "home.png"), { force: true });
+  });
+
+  it("removes the staging dir after a successful run", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rm } = await import("node:fs/promises");
+
+    await runFlow(screen(), {
+      rawDir,
+      serial: "emulator-5554",
+      appearance: "light",
+    });
+
+    expect(rm).toHaveBeenCalledWith(staging, { recursive: true, force: true });
+  });
+
+  it("removes the staging dir after a failed run", async () => {
+    const { run } = await import("../src/util/exec.js");
+    vi.mocked(run).mockRejectedValueOnce(new Error("maestro exited 1"));
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rm } = await import("node:fs/promises");
+
+    await expect(
+      runFlow(screen(), {
+        rawDir,
+        serial: "emulator-5554",
+        appearance: "light",
+      }),
+    ).rejects.toThrow();
+
+    expect(rm).toHaveBeenCalledWith(staging, { recursive: true, force: true });
   });
 });

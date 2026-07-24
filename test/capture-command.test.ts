@@ -23,6 +23,10 @@ vi.mock("../src/capture/device.js", () => ({
 vi.mock("../src/capture/maestro.js", () => ({
   runFlow: vi.fn(async () => "/some/raw/home.png"),
 }));
+// `--clean` is the only thing that deletes; keep it off the real filesystem.
+vi.mock("node:fs/promises", () => ({
+  rm: vi.fn(async () => undefined),
+}));
 
 const configDir = "C:/client/repo";
 
@@ -204,6 +208,60 @@ describe("runCapture", () => {
     await runCapture({});
 
     expect(setNightMode).not.toHaveBeenCalled();
+  });
+
+  it("empties the raw dir before capturing when --clean is passed", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { rm } = await import("node:fs/promises");
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig(),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    await runCapture({ clean: true });
+
+    expect(rm).toHaveBeenCalledTimes(1);
+    expect(rm).toHaveBeenCalledWith(
+      resolve(configDir, ".vitrine/screenshots/raw"),
+      { recursive: true, force: true },
+    );
+  });
+
+  it("never deletes the raw dir without --clean", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { rm } = await import("node:fs/promises");
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig(),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    await runCapture({});
+
+    expect(rm).not.toHaveBeenCalled();
+  });
+
+  it("warns when --clean is combined with --only", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig(),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+
+    const { runCapture } = await import("../src/capture/command.js");
+    await runCapture({ clean: true, only: "home" });
+
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining("--clean empties"),
+    );
+    stderrSpy.mockRestore();
   });
 
   it("lets --appearance override the configured appearance", async () => {

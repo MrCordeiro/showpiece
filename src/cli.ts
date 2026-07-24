@@ -21,6 +21,7 @@ program
     "--appearance <mode>",
     "capture in light or dark mode (overrides the config value)",
   )
+  .option("--clean", "empty the raw output directory before capturing")
   .action(async (opts) => {
     try {
       process.exitCode = await runCapture(opts);

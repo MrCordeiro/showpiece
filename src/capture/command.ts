@@ -1,3 +1,4 @@
+import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import type { Appearance, Config, ScreenConfig } from "../config/schema.js";
@@ -23,6 +24,8 @@ export interface CaptureOptions {
   serial?: string;
   /** UI mode override (`--appearance`), beating the configured value. */
   appearance?: string;
+  /** Empty the raw output directory before capturing (`--clean`). */
+  clean?: boolean;
 }
 
 /**
@@ -143,6 +146,15 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
 
   const rawDir = resolve(config.screenshotsDir, "raw");
   const results: CaptureResult[] = [];
+
+  if (options.clean) {
+    if (options.only) {
+      process.stderr.write(
+        `\n⚠ --clean empties ${rawDir}, including screens outside --only that this run will not re-capture.\n`,
+      );
+    }
+    await rm(rawDir, { recursive: true, force: true });
+  }
 
   try {
     for (const screen of screens) {
