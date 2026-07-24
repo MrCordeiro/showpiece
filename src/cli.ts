@@ -17,6 +17,10 @@ program
   .option("-c, --config <path>", "path to the config file")
   .option("--only <ids>", "comma-separated screen ids to capture a subset")
   .option("--serial <device>", "target a specific adb device/emulator serial")
+  .option(
+    "--appearance <mode>",
+    "capture in light or dark mode (overrides the config value)",
+  )
   .action(async (opts) => {
     try {
       process.exitCode = await runCapture(opts);

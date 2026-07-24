@@ -17,6 +17,8 @@ vi.mock("../src/capture/device.js", () => ({
   setupMetroReverse: vi.fn(async () => undefined),
   overrideMetroHost: vi.fn(async () => undefined),
   assertMetroRunning: vi.fn(async () => undefined),
+  getNightMode: vi.fn(async () => "no"),
+  setNightMode: vi.fn(async () => undefined),
 }));
 vi.mock("../src/capture/maestro.js", () => ({
   runFlow: vi.fn(async () => "/some/raw/home.png"),
@@ -56,6 +58,25 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
   };
 }
 
+describe("resolveAppearance", () => {
+  it("falls back to the configured appearance when no flag is given", async () => {
+    const { resolveAppearance } = await import("../src/capture/command.js");
+    expect(resolveAppearance("dark", undefined)).toBe("dark");
+  });
+
+  it("lets the flag override the config", async () => {
+    const { resolveAppearance } = await import("../src/capture/command.js");
+    expect(resolveAppearance("light", "dark")).toBe("dark");
+  });
+
+  it("throws on an unknown flag value", async () => {
+    const { resolveAppearance } = await import("../src/capture/command.js");
+    expect(() => resolveAppearance("light", "sepia")).toThrow(
+      /Invalid --appearance "sepia"/,
+    );
+  });
+});
+
 describe("runCapture", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,5 +100,124 @@ describe("runCapture", () => {
         rawDir: resolve(configDir, ".vitrine/screenshots/raw"),
       }),
     );
+  });
+
+  it("sets dark night mode and passes the appearance to runFlow", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { setNightMode } = await import("../src/capture/device.js");
+    const { runFlow } = await import("../src/capture/maestro.js");
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ appearance: "dark" }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    await runCapture({});
+
+    expect(setNightMode).toHaveBeenCalledWith("emulator-5554", "yes");
+    expect(runFlow).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "home" }),
+      expect.objectContaining({ appearance: "dark" }),
+    );
+  });
+
+  it("restores the device's previous night mode after capturing", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { getNightMode, setNightMode } = await import(
+      "../src/capture/device.js"
+    );
+    vi.mocked(getNightMode).mockResolvedValueOnce("custom_schedule");
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ appearance: "dark" }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    await runCapture({});
+
+    expect(setNightMode).toHaveBeenNthCalledWith(1, "emulator-5554", "yes");
+    expect(setNightMode).toHaveBeenNthCalledWith(
+      2,
+      "emulator-5554",
+      "custom_schedule",
+    );
+  });
+
+  it("restores the previous night mode even when a flow fails", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { setNightMode } = await import("../src/capture/device.js");
+    const { runFlow } = await import("../src/capture/maestro.js");
+    vi.mocked(runFlow).mockRejectedValueOnce(new Error("maestro exploded"));
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ appearance: "dark" }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    const exitCode = await runCapture({});
+
+    expect(exitCode).toBe(1);
+    expect(setNightMode).toHaveBeenNthCalledWith(2, "emulator-5554", "no");
+  });
+
+  it("warns but does not fail the run when restoring night mode fails", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { setNightMode } = await import("../src/capture/device.js");
+    vi.mocked(setNightMode)
+      .mockResolvedValueOnce(undefined) // the initial forced set succeeds
+      .mockRejectedValueOnce(new Error("adb: device offline")); // the restore fails
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ appearance: "dark" }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+
+    const { runCapture } = await import("../src/capture/command.js");
+    const exitCode = await runCapture({});
+
+    expect(exitCode).toBe(0);
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Could not restore"),
+    );
+    stderrSpy.mockRestore();
+  });
+
+  it("does not force a night mode when the initial read fails", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { getNightMode, setNightMode } = await import(
+      "../src/capture/device.js"
+    );
+    vi.mocked(getNightMode).mockResolvedValueOnce(undefined);
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ appearance: "dark" }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    await runCapture({});
+
+    expect(setNightMode).not.toHaveBeenCalled();
+  });
+
+  it("lets --appearance override the configured appearance", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { setNightMode } = await import("../src/capture/device.js");
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ appearance: "light" }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    await runCapture({ appearance: "dark" });
+
+    expect(setNightMode).toHaveBeenNthCalledWith(1, "emulator-5554", "yes");
   });
 });

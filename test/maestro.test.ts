@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertFlowConvention,
   extractScreenshotNames,
+  outputFileName,
 } from "../src/capture/maestro.js";
 import type { ScreenConfig } from "../src/config/schema.js";
 
@@ -63,11 +64,23 @@ describe("assertFlowConvention", () => {
   });
 });
 
+describe("outputFileName", () => {
+  it("leaves light-mode captures unsuffixed", () => {
+    expect(outputFileName("home", "light")).toBe("home.png");
+  });
+
+  it("suffixes dark-mode captures with -dark", () => {
+    expect(outputFileName("home", "dark")).toBe("home-dark.png");
+  });
+});
+
 // runFlow drives the filesystem + maestro; mock those boundaries.
 vi.mock("node:fs", () => ({ existsSync: vi.fn(() => true) }));
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(async () => "appId: x\n---\n- takeScreenshot: home"),
   mkdir: vi.fn(async () => undefined),
+  rm: vi.fn(async () => undefined),
+  rename: vi.fn(async () => undefined),
 }));
 vi.mock("../src/util/exec.js", () => ({
   run: vi.fn(async () => ({ stdout: "" })),
@@ -86,6 +99,7 @@ describe("runFlow", () => {
     const out = await runFlow(screen(), {
       rawDir,
       serial: "emulator-5554",
+      appearance: "light",
     });
 
     // Built via the same platform-native `join` the implementation uses —
@@ -105,7 +119,73 @@ describe("runFlow", () => {
     const { runFlow } = await import("../src/capture/maestro.js");
 
     await expect(
-      runFlow(screen(), { rawDir: "/tmp/raw", serial: "emulator-5554" }),
+      runFlow(screen(), {
+        rawDir: "/tmp/raw",
+        serial: "emulator-5554",
+        appearance: "light",
+      }),
     ).rejects.toThrow(/was not produced/);
+  });
+
+  it("renames the capture to a -dark path on a dark run", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rename } = await import("node:fs/promises");
+
+    const rawDir = "/tmp/raw";
+    const out = await runFlow(screen(), {
+      rawDir,
+      serial: "emulator-5554",
+      appearance: "dark",
+    });
+
+    expect(out).toBe(join(rawDir, "home-dark.png"));
+    expect(rename).toHaveBeenCalledWith(
+      join(rawDir, "home.png"),
+      join(rawDir, "home-dark.png"),
+    );
+  });
+
+  it("does not rename on a light run", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rename } = await import("node:fs/promises");
+
+    await runFlow(screen(), {
+      rawDir: "/tmp/raw",
+      serial: "emulator-5554",
+      appearance: "light",
+    });
+
+    expect(rename).not.toHaveBeenCalled();
+  });
+
+  it("removes a stale capture before running maestro", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rm } = await import("node:fs/promises");
+
+    const rawDir = "/tmp/raw";
+    await runFlow(screen(), {
+      rawDir,
+      serial: "emulator-5554",
+      appearance: "light",
+    });
+
+    expect(rm).toHaveBeenCalledWith(join(rawDir, "home.png"), { force: true });
+  });
+
+  it("removes both the bare and -dark stale captures before running maestro on a dark run", async () => {
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { rm } = await import("node:fs/promises");
+
+    const rawDir = "/tmp/raw";
+    await runFlow(screen(), {
+      rawDir,
+      serial: "emulator-5554",
+      appearance: "dark",
+    });
+
+    expect(rm).toHaveBeenCalledWith(join(rawDir, "home.png"), { force: true });
+    expect(rm).toHaveBeenCalledWith(join(rawDir, "home-dark.png"), {
+      force: true,
+    });
   });
 });

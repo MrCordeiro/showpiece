@@ -308,3 +308,51 @@ export async function assertMetroRunning(port: number): Promise<void> {
     );
   }
 }
+
+/**
+ * Parse the output of `adb shell cmd uimode night`, e.g. `"Night mode: no"`.
+ * Returns the raw mode lowercased so it can be handed straight back to
+ * `setNightMode` — devices also report `auto` and `custom_schedule`, not just
+ * `yes`/`no`. Returns undefined when the output isn't recognizable (an older
+ * system image without the `night` subcommand). Pure — unit tested directly.
+ */
+export function parseNightMode(stdout: string): string | undefined {
+  const match = /night mode:\s*(\S+)/i.exec(stdout);
+  return match?.[1]?.toLowerCase();
+}
+
+/**
+ * Read the device's current night mode so capture can restore it afterwards.
+ * Never throws: an unreadable mode just means the caller skips the restore
+ * rather than guessing a value and clobbering the user's setting.
+ */
+export async function getNightMode(
+  serial: string,
+): Promise<string | undefined> {
+  const { stdout } = await run(
+    "adb",
+    ["-s", serial, "shell", "cmd", "uimode", "night"],
+    { reject: false },
+  );
+  return parseNightMode(stdout);
+}
+
+/**
+ * Put the device into `yes` (dark), `no` (light), or a mode previously read by
+ * {@link getNightMode}. The app must follow the system appearance for this to
+ * change anything on screen.
+ */
+export async function setNightMode(
+  serial: string,
+  mode: string,
+): Promise<void> {
+  try {
+    await run("adb", ["-s", serial, "shell", "cmd", "uimode", "night", mode]);
+  } catch (error) {
+    throw new Error(
+      `Failed to set night mode "${mode}" on ${serial}. \`cmd uimode night\` requires Android 10 (API 29) or newer — check the AVD's system image. Original error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}

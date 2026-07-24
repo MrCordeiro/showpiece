@@ -25,6 +25,11 @@ export default defineConfig({
     serviceAccountKeyPath: "./secrets/play-service-account.json",
     track: "listing",
   },
+  // System UI mode the device is put into before capturing. "dark" also saves
+  // every screenshot with a `-dark` suffix. Override per run with
+  // `npx vitrine capture --appearance dark`. Your app must follow the system
+  // appearance for this to change anything.
+  appearance: "light",
   screens: [
     {
       id: "home",

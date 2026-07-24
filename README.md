@@ -68,6 +68,7 @@ export default defineConfig({
     serviceAccountKeyPath: "./secrets/play-service-account.json",
     track: "listing",
   },
+  appearance: "light",
   screenshotsDir: ".vitrine/screenshots", // optional; this is the default
   screens: [
     { id: "home", flow: ".vitrine/flows/home.yaml", caption: "Track everything in one place" },
@@ -160,6 +161,7 @@ and launch-based (`home.yaml`) variants.
 npx vitrine capture                       # capture every configured screen
 npx vitrine capture --only home,profile   # capture a subset
 npx vitrine capture --serial emulator-5554  # target a specific device
+npx vitrine capture --appearance dark      # capture in dark mode
 npx vitrine capture --config ./path/to/vitrine.config.ts
 ```
 
@@ -214,6 +216,45 @@ Flow gotchas for Metro-backed debug builds:
 **Standalone builds:** for a release/preview APK that embeds the bundle (e.g.
 `expo run:android --variant release`, or an EAS `preview` build), set
 `device.devServer: false` — vitrine then skips the Metro wiring entirely.
+
+## Dark mode
+
+Set the UI mode the device captures in — in the config, or per run:
+
+```ts
+// vitrine.config.ts
+appearance: "dark",   // "light" (default) | "dark"
+```
+
+```bash
+npx vitrine capture                       # uses the configured appearance
+npx vitrine capture --appearance dark     # overrides it for one run
+```
+
+Dark-mode screenshots are saved with a `-dark` suffix, so both sets coexist:
+
+```txt
+.vitrine/screenshots/raw/home.png        # light
+.vitrine/screenshots/raw/home-dark.png   # dark
+```
+
+Capturing both is two runs against the same config:
+
+```bash
+npx vitrine capture --appearance light
+npx vitrine capture --appearance dark
+```
+
+Under the hood vitrine runs `adb shell cmd uimode night <yes|no>` before the
+flows and restores the device's previous mode afterwards. Reading back and
+restoring the device's mode needs Android 10 / API 29 or newer; on older
+system images vitrine leaves the mode as-is and warns instead of forcing a
+change.
+
+> **Your app has to follow the system appearance for this to do anything.** In
+> Expo that means `"userInterfaceStyle": "automatic"` (or `"dark"`) in
+> `app.json` — the default is `"light"`, which ignores the system setting
+> entirely and will hand you light screenshots named `-dark`.
 
 ## Development
 
