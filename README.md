@@ -5,7 +5,8 @@ Play Store screenshot pipeline CLI. Capture Android app screenshots with
 publish them to a Google Play listing via the Play Developer API — one command,
 no design tool, no fastlane.
 
-> **Status:** milestone 1 (`capture`) implemented. `frame` and `publish` land in
+> **Status:** milestone 1 (`capture`), including per-screen diagnostics and a
+> bundled troubleshooting skill, is implemented. `frame` and `publish` land in
 > subsequent milestones.
 
 ## How it works
@@ -82,10 +83,12 @@ export default defineConfig({
 Flows and generated screenshots both live under `.vitrine/` at your repo
 root — a dedicated namespace so vitrine never collides with folders your app
 already owns. `.vitrine/flows/` is authored and should be committed;
-`.vitrine/screenshots/` is generated output and should be gitignored:
+`.vitrine/screenshots/` and `.vitrine/diagnostics/` are generated output and
+should be gitignored:
 
 ```gitignore
 .vitrine/screenshots/
+.vitrine/diagnostics/
 ```
 
 ## Writing flows
@@ -175,8 +178,10 @@ What it does:
    is already installed.
 4. For a dev build (`device.devServer: true`), forwards the Metro port with
    `adb reverse` and verifies Metro is running (see below).
-5. Runs each screen's flow in config order, writing `.vitrine/screenshots/raw/<id>.png`.
-6. Prints a summary table and exits non-zero if any screen failed.
+5. Runs each screen's flow in config order, writing `.vitrine/screenshots/raw/<id>.png`
+   and per-screen troubleshooting evidence to `.vitrine/diagnostics/<id>/` (see
+   [Troubleshooting](#troubleshooting)).
+6. Prints a summary table plus a run report path, and exits non-zero if any screen failed.
 
 Capture works against **any installed build** — never a production build.
 
@@ -260,6 +265,62 @@ change.
 > Expo that means `"userInterfaceStyle": "automatic"` (or `"dark"`) in
 > `app.json` — the default is `"light"`, which ignores the system setting
 > entirely and will hand you light screenshots named `-dark`.
+
+## Troubleshooting
+
+Every attempted screen — success or failure — leaves per-screen evidence
+under `.vitrine/diagnostics/<id>[-dark]/`, and every run writes a
+machine-readable summary to `.vitrine/diagnostics/last-run.json`:
+
+```txt
+.vitrine/diagnostics/
+  last-run.json              per-screen status + error code + path, for the most recent run
+  home/
+    context.json               vitrine's own record: flow, serial, exitCode, status, timestamp
+    commands.json               Maestro's per-step log
+    failure-screenshot.png      pixel state at the failing step (failures only)
+    hierarchy.json              view hierarchy after the flow ended
+    maestro.log                 Maestro's own log
+    maestro-stdout.log          combined stdout+stderr of the maestro process
+    crash-signals.log           grepped logcat: native crashes, Java exceptions, process death
+    logcat.txt                  full device logcat captured during the attempt
+```
+
+Vitrine also checks whether the app's process is still alive after a
+failure — a stalled bundle fetch and a crashed app look identical to
+Maestro (an assertion that never becomes true), so this is the only
+reliable way to tell them apart. A dead process reports `E_APP_CRASHED`
+with `crash-signals.log` as the pointer, instead of a generic assertion
+failure that sends you hunting for a selector bug that was never there.
+
+The summary table also prints the diagnostics path for any failed screen:
+
+```txt
+Capture summary
+---------------
+✗ home  Step failed: assertVisible: Home after 10.0s (FAILED). See ...
+        → diagnostics: .vitrine/diagnostics/home
+
+1 screen(s) · 0 captured · 1 failed
+```
+
+Failures carry a machine-readable `code` (`E_FLOW_CONVENTION`,
+`E_FLOW_FAILED`, `E_METRO_UNREACHABLE`, `E_APP_NOT_INSTALLED`, …) in both the
+summary and `last-run.json`.
+
+### Let an agent fix it
+
+```bash
+npx vitrine skill install          # writes .claude/skills/vitrine-flows/SKILL.md
+npx vitrine skill install --force  # overwrite an already-installed copy
+```
+
+This installs a Claude Code skill (commit it — it's small and repo-specific)
+that documents vitrine's conventions, the diagnostics layout above, and an
+error-code → fix-recipe table, so an agent working in your repo can read a
+failed run's evidence and repair the flow or `vitrine.config.ts` itself. It
+never touches vitrine's own source. Re-run after upgrading vitrine to pick up
+skill updates.
 
 ## Development
 

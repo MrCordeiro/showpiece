@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getNightMode,
+  isProcessRunning,
   parseAdbDevices,
   parseNightMode,
+  parseProcessList,
   setNightMode,
 } from "../src/capture/device.js";
 
@@ -97,6 +99,77 @@ describe("getNightMode", () => {
     });
 
     await expect(getNightMode("emulator-5554")).resolves.toBeUndefined();
+  });
+});
+
+describe("parseProcessList", () => {
+  it("finds a package that's running", () => {
+    const stdout = [
+      "USER  PID  PPID  ... NAME",
+      "u0_a174 2073 307 13908024 215924 0 0 S com.pluckd.cashzilla.dev",
+    ].join("\n");
+    expect(parseProcessList(stdout, "com.pluckd.cashzilla.dev")).toBe(true);
+  });
+
+  it("returns false when the package isn't in the process list", () => {
+    const stdout = [
+      "USER  PID  PPID  ... NAME",
+      "u0_a1 100 1 0 0 0 S com.other.app",
+    ].join("\n");
+    expect(parseProcessList(stdout, "com.example.app")).toBe(false);
+  });
+
+  it("doesn't false-positive on a package name that's a substring of another", () => {
+    const stdout = "u0_a1 100 1 0 0 0 S com.example.app.dev";
+    expect(parseProcessList(stdout, "com.example.app")).toBe(false);
+  });
+
+  it("returns false for empty output", () => {
+    expect(parseProcessList("", "com.example.app")).toBe(false);
+  });
+});
+
+describe("isProcessRunning", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns true when the process list contains the package", async () => {
+    const { run } = await import("../src/util/exec.js");
+    vi.mocked(run).mockResolvedValueOnce({
+      stdout: "u0_a174 2073 307 0 0 0 S com.example.app",
+      stderr: "",
+      exitCode: 0,
+    });
+
+    await expect(
+      isProcessRunning("emulator-5554", "com.example.app"),
+    ).resolves.toBe(true);
+    expect(run).toHaveBeenCalledWith(
+      "adb",
+      ["-s", "emulator-5554", "shell", "ps", "-A"],
+      expect.objectContaining({ reject: false }),
+    );
+  });
+
+  it("returns false when the process is gone", async () => {
+    const { run } = await import("../src/util/exec.js");
+    vi.mocked(run).mockResolvedValueOnce({
+      stdout: "u0_a1 100 1 0 0 0 S com.other.app",
+      stderr: "",
+      exitCode: 0,
+    });
+
+    await expect(
+      isProcessRunning("emulator-5554", "com.example.app"),
+    ).resolves.toBe(false);
+  });
+
+  it("defaults to true (assume running) when the check itself fails", async () => {
+    const { run } = await import("../src/util/exec.js");
+    vi.mocked(run).mockRejectedValueOnce(new Error("device offline"));
+
+    await expect(
+      isProcessRunning("emulator-5554", "com.example.app"),
+    ).resolves.toBe(true);
   });
 });
 

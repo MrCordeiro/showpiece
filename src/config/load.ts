@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { createJiti } from "jiti";
 import type { z } from "zod";
+import { VitrineError } from "../util/errors.js";
 import { type Config, configSchema } from "./schema.js";
 
 const DEFAULT_BASENAMES = [
@@ -35,7 +36,10 @@ export async function loadConfig(
 
   const parsed = configSchema.safeParse(raw);
   if (!parsed.success) {
-    throw new Error(formatConfigError(parsed.error, configPath));
+    throw new VitrineError(
+      "E_CONFIG_INVALID",
+      formatConfigError(parsed.error, configPath),
+    );
   }
 
   const configDir = dirname(configPath);
@@ -55,7 +59,10 @@ function resolveConfigPath(
       ? explicitPath
       : resolve(cwd, explicitPath);
     if (!existsSync(abs)) {
-      throw new Error(`Config file not found: ${abs}`);
+      throw new VitrineError(
+        "E_CONFIG_NOT_FOUND",
+        `Config file not found: ${abs}`,
+      );
     }
     return abs;
   }
@@ -65,7 +72,8 @@ function resolveConfigPath(
     if (existsSync(candidate)) return candidate;
   }
 
-  throw new Error(
+  throw new VitrineError(
+    "E_CONFIG_NOT_FOUND",
     `No config file found in ${cwd}. Expected one of: ${DEFAULT_BASENAMES.join(
       ", ",
     )} (or pass --config <path>).`,
@@ -89,6 +97,7 @@ function withResolvedPaths(config: Config, configDir: string): Config {
   return {
     ...config,
     screenshotsDir: abs(config.screenshotsDir),
+    diagnosticsDir: abs(config.diagnosticsDir),
     app: {
       ...config.app,
       apkPath: config.app.apkPath ? abs(config.app.apkPath) : undefined,

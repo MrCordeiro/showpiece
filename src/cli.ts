@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runCapture } from "./capture/command.js";
+import { runSkillInstall } from "./skill/command.js";
 
 const program = new Command();
 
@@ -25,6 +26,27 @@ program
   .action(async (opts) => {
     try {
       process.exitCode = await runCapture(opts);
+    } catch (error) {
+      process.stderr.write(
+        `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+      process.exitCode = 1;
+    }
+  });
+
+const skill = program
+  .command("skill")
+  .description("Manage vitrine's bundled Claude Code skill.");
+
+skill
+  .command("install")
+  .description(
+    "Copy the bundled vitrine-flows skill into .claude/skills/ in this repo.",
+  )
+  .option("--force", "overwrite an already-installed copy")
+  .action(async (opts) => {
+    try {
+      process.exitCode = await runSkillInstall({ force: opts.force });
     } catch (error) {
       process.stderr.write(
         `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,

@@ -23,9 +23,14 @@ vi.mock("../src/capture/device.js", () => ({
 vi.mock("../src/capture/maestro.js", () => ({
   runFlow: vi.fn(async () => "/some/raw/home.png"),
 }));
-// `--clean` is the only thing that deletes; keep it off the real filesystem.
+// `--clean` deletes for real; `writeRunReport` (via `../src/util/report.js`)
+// creates/writes the diagnostics dir and last-run.json. Keep all of it off
+// the real filesystem — a fs call added to runCapture's path that isn't
+// mocked here resolves `undefined` and fails confusingly.
 vi.mock("node:fs/promises", () => ({
   rm: vi.fn(async () => undefined),
+  mkdir: vi.fn(async () => undefined),
+  writeFile: vi.fn(async () => undefined),
 }));
 
 const configDir = "C:/client/repo";
@@ -50,6 +55,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
       track: "listing",
     },
     screenshotsDir: resolve(configDir, ".vitrine/screenshots"),
+    diagnosticsDir: resolve(configDir, ".vitrine/diagnostics"),
     appearance: "light",
     screens: [
       {
@@ -210,7 +216,7 @@ describe("runCapture", () => {
     expect(setNightMode).not.toHaveBeenCalled();
   });
 
-  it("empties the raw dir before capturing when --clean is passed", async () => {
+  it("empties the raw dir and diagnostics dir before capturing when --clean is passed", async () => {
     const { loadConfig } = await import("../src/config/load.js");
     const { rm } = await import("node:fs/promises");
     vi.mocked(loadConfig).mockResolvedValue({
@@ -222,9 +228,12 @@ describe("runCapture", () => {
     const { runCapture } = await import("../src/capture/command.js");
     await runCapture({ clean: true });
 
-    expect(rm).toHaveBeenCalledTimes(1);
     expect(rm).toHaveBeenCalledWith(
       resolve(configDir, ".vitrine/screenshots/raw"),
+      { recursive: true, force: true },
+    );
+    expect(rm).toHaveBeenCalledWith(
+      resolve(configDir, ".vitrine/diagnostics"),
       { recursive: true, force: true },
     );
   });

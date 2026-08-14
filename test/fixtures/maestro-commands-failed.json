@@ -1,0 +1,52 @@
+[
+  {
+    "command": {
+      "launchAppCommand": { "appId": "com.example.app", "optional": false }
+    },
+    "metadata": {
+      "status": "COMPLETED",
+      "timestamp": 1786629275577,
+      "duration": 5427,
+      "sequenceNumber": 2
+    }
+  },
+  {
+    "command": {
+      "applyConfigurationCommand": { "config": { "appId": "com.example.app" } }
+    },
+    "metadata": {
+      "status": "COMPLETED",
+      "timestamp": 1786629275572,
+      "duration": 5,
+      "sequenceNumber": 1
+    }
+  },
+  {
+    "command": {
+      "defineVariablesCommand": { "env": { "MAESTRO_FILENAME": "home" } }
+    },
+    "metadata": {
+      "status": "COMPLETED",
+      "timestamp": 1786629275542,
+      "duration": 14,
+      "sequenceNumber": 0
+    }
+  },
+  {
+    "command": {
+      "assertConditionCommand": {
+        "condition": {
+          "visible": { "textRegex": "Net Worth", "optional": false }
+        },
+        "timeout": "90000",
+        "optional": false
+      }
+    },
+    "metadata": {
+      "status": "FAILED",
+      "timestamp": 1786629281006,
+      "duration": 90078,
+      "sequenceNumber": 3
+    }
+  }
+]

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertFlowConvention,
   extractScreenshotNames,
-  outputFileName,
+  createOutputFileName,
 } from "../src/capture/maestro.js";
 import type { ScreenConfig } from "../src/config/schema.js";
 
@@ -64,17 +64,18 @@ describe("assertFlowConvention", () => {
   });
 });
 
-describe("outputFileName", () => {
+describe("createOutputFileName", () => {
   it("leaves light-mode captures unsuffixed", () => {
-    expect(outputFileName("home", "light")).toBe("home.png");
+    expect(createOutputFileName("home", "light")).toBe("home.png");
   });
 
   it("suffixes dark-mode captures with -dark", () => {
-    expect(outputFileName("home", "dark")).toBe("home-dark.png");
+    expect(createOutputFileName("home", "dark")).toBe("home-dark.png");
   });
 });
 
-// runFlow drives the filesystem + maestro; mock those boundaries.
+// runFlow drives the filesystem + the diagnostics module (which itself owns
+// the maestro/hierarchy shell-outs); mock those boundaries.
 vi.mock("node:fs", () => ({ existsSync: vi.fn(() => true) }));
 vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(async () => "appId: x\n---\n- takeScreenshot: home"),
@@ -85,33 +86,55 @@ vi.mock("node:fs/promises", () => ({
   rm: vi.fn(async () => undefined),
   rename: vi.fn(async () => undefined),
 }));
-vi.mock("../src/util/exec.js", () => ({
-  run: vi.fn(async () => ({ stdout: "" })),
+vi.mock("../src/capture/diagnostics.js", () => ({
+  // Real (pure) implementation — runFlow and this test both need it to agree.
+  outputBaseName: (id: string, appearance: string) =>
+    appearance === "dark" ? `${id}-dark` : id,
+  ensureScreenDiagnosticsDir: vi.fn(
+    async (diagnosticsDir: string, baseName: string) =>
+      join(diagnosticsDir, baseName),
+  ),
+  collectDiagnostics: vi.fn(async () => ({ exitCode: 0, ok: true })),
+  writeContext: vi.fn(async () => undefined),
 }));
 
 const rawDir = "/tmp/raw";
+const diagnosticsDir = "/tmp/diagnostics";
 const staging = `${join(rawDir, ".vitrine-")}abc123`;
+
+const runFlowOptions = {
+  rawDir,
+  diagnosticsDir,
+  serial: "emulator-5554",
+  packageName: "com.example.app",
+  devServer: true,
+  metroPort: 8081,
+};
 
 describe("runFlow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("runs maestro in a staging dir, not the raw output dir", async () => {
+  it("collects diagnostics in the staging dir, not the raw output dir", async () => {
     const { runFlow } = await import("../src/capture/maestro.js");
-    const { run } = await import("../src/util/exec.js");
+    const { collectDiagnostics } = await import(
+      "../src/capture/diagnostics.js"
+    );
 
     const out = await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
+      ...runFlowOptions,
       appearance: "light",
     });
 
     expect(out).toBe(join(rawDir, "home.png"));
-    expect(run).toHaveBeenCalledWith(
-      "maestro",
-      ["--device", "emulator-5554", "test", "flows/home.yaml"],
-      expect.objectContaining({ cwd: staging }),
+    expect(collectDiagnostics).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flowPath: "flows/home.yaml",
+        serial: "emulator-5554",
+        cwd: staging,
+        screenDiagDir: join(diagnosticsDir, "home"),
+      }),
     );
   });
 
@@ -119,11 +142,7 @@ describe("runFlow", () => {
     const { runFlow } = await import("../src/capture/maestro.js");
     const { rename } = await import("node:fs/promises");
 
-    await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
-      appearance: "light",
-    });
+    await runFlow(screen(), { ...runFlowOptions, appearance: "light" });
 
     expect(rename).toHaveBeenCalledWith(
       join(staging, "home.png"),
@@ -136,8 +155,7 @@ describe("runFlow", () => {
     const { rename } = await import("node:fs/promises");
 
     const out = await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
+      ...runFlowOptions,
       appearance: "dark",
     });
 
@@ -152,11 +170,7 @@ describe("runFlow", () => {
     const { runFlow } = await import("../src/capture/maestro.js");
     const { rm } = await import("node:fs/promises");
 
-    await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
-      appearance: "dark",
-    });
+    await runFlow(screen(), { ...runFlowOptions, appearance: "dark" });
 
     expect(rm).not.toHaveBeenCalledWith(
       join(rawDir, "home.png"),
@@ -170,26 +184,24 @@ describe("runFlow", () => {
     const { runFlow } = await import("../src/capture/maestro.js");
 
     await expect(
-      runFlow(screen(), {
-        rawDir,
-        serial: "emulator-5554",
-        appearance: "light",
-      }),
+      runFlow(screen(), { ...runFlowOptions, appearance: "light" }),
     ).rejects.toThrow(/was not produced/);
   });
 
   it("removes only the failed screen's own output when the flow fails", async () => {
-    const { run } = await import("../src/util/exec.js");
-    vi.mocked(run).mockRejectedValueOnce(new Error("maestro exited 1"));
+    const { collectDiagnostics } = await import(
+      "../src/capture/diagnostics.js"
+    );
+    vi.mocked(collectDiagnostics).mockResolvedValueOnce({
+      exitCode: 1,
+      ok: false,
+      errorMessage: "maestro exited 1",
+    });
     const { runFlow } = await import("../src/capture/maestro.js");
     const { rm } = await import("node:fs/promises");
 
     await expect(
-      runFlow(screen(), {
-        rawDir,
-        serial: "emulator-5554",
-        appearance: "dark",
-      }),
+      runFlow(screen(), { ...runFlowOptions, appearance: "dark" }),
     ).rejects.toThrow(/maestro exited 1/);
 
     // The failed dark capture is cleared so `frame`/`publish` can't ship a PNG
@@ -210,11 +222,7 @@ describe("runFlow", () => {
     const { rm } = await import("node:fs/promises");
 
     await expect(
-      runFlow(screen(), {
-        rawDir,
-        serial: "emulator-5554",
-        appearance: "light",
-      }),
+      runFlow(screen(), { ...runFlowOptions, appearance: "light" }),
     ).rejects.toThrow(/was not produced/);
 
     expect(rm).toHaveBeenCalledWith(join(rawDir, "home.png"), { force: true });
@@ -224,29 +232,84 @@ describe("runFlow", () => {
     const { runFlow } = await import("../src/capture/maestro.js");
     const { rm } = await import("node:fs/promises");
 
-    await runFlow(screen(), {
-      rawDir,
-      serial: "emulator-5554",
-      appearance: "light",
-    });
+    await runFlow(screen(), { ...runFlowOptions, appearance: "light" });
 
     expect(rm).toHaveBeenCalledWith(staging, { recursive: true, force: true });
   });
 
   it("removes the staging dir after a failed run", async () => {
-    const { run } = await import("../src/util/exec.js");
-    vi.mocked(run).mockRejectedValueOnce(new Error("maestro exited 1"));
+    const { collectDiagnostics } = await import(
+      "../src/capture/diagnostics.js"
+    );
+    vi.mocked(collectDiagnostics).mockResolvedValueOnce({
+      exitCode: 1,
+      ok: false,
+      errorMessage: "maestro exited 1",
+    });
     const { runFlow } = await import("../src/capture/maestro.js");
     const { rm } = await import("node:fs/promises");
 
     await expect(
-      runFlow(screen(), {
-        rawDir,
-        serial: "emulator-5554",
-        appearance: "light",
-      }),
+      runFlow(screen(), { ...runFlowOptions, appearance: "light" }),
     ).rejects.toThrow();
 
     expect(rm).toHaveBeenCalledWith(staging, { recursive: true, force: true });
+  });
+
+  it("always writes context.json — including when the flow fails", async () => {
+    const { collectDiagnostics } = await import(
+      "../src/capture/diagnostics.js"
+    );
+    vi.mocked(collectDiagnostics).mockResolvedValueOnce({
+      exitCode: 1,
+      ok: false,
+      errorMessage: "maestro exited 1",
+    });
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { writeContext, ensureScreenDiagnosticsDir } = await import(
+      "../src/capture/diagnostics.js"
+    );
+
+    await expect(
+      runFlow(screen(), { ...runFlowOptions, appearance: "light" }),
+    ).rejects.toThrow();
+
+    expect(ensureScreenDiagnosticsDir).toHaveBeenCalledWith(
+      diagnosticsDir,
+      "home",
+    );
+    expect(writeContext).toHaveBeenCalledWith(
+      join(diagnosticsDir, "home"),
+      expect.objectContaining({
+        id: "home",
+        status: "failed",
+        code: "E_FLOW_FAILED",
+        error: "maestro exited 1",
+      }),
+    );
+  });
+
+  it("writes context.json before flow validation, so a convention violation still leaves one", async () => {
+    const fs = await import("node:fs/promises");
+    vi.mocked(fs.readFile).mockResolvedValueOnce(
+      "appId: x\n---\n- assertVisible: Home", // no takeScreenshot at all
+    );
+    const { runFlow } = await import("../src/capture/maestro.js");
+    const { writeContext, ensureScreenDiagnosticsDir } = await import(
+      "../src/capture/diagnostics.js"
+    );
+
+    await expect(
+      runFlow(screen(), { ...runFlowOptions, appearance: "light" }),
+    ).rejects.toThrow(/no takeScreenshot/);
+
+    expect(ensureScreenDiagnosticsDir).toHaveBeenCalledWith(
+      diagnosticsDir,
+      "home",
+    );
+    expect(writeContext).toHaveBeenCalledWith(
+      join(diagnosticsDir, "home"),
+      expect.objectContaining({ status: "failed", code: "E_FLOW_CONVENTION" }),
+    );
   });
 });
