@@ -29,6 +29,7 @@
     "format": "biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "vendor:fonts": "node scripts/vendor-fonts.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {
