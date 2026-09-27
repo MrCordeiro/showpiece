@@ -127,11 +127,11 @@ Convention: each flow's `takeScreenshot` name must match the screen `id`. `captu
 
 ### P0 — `frame`
 
-- [ ] Composites each `.vitrine/screenshots/raw/<id>.png` into a store-ready image: device bezel overlay, background (solid or 2-stop linear gradient), caption text above the device.
-- [ ] Output: `.vitrine/screenshots/framed/<id>.png` at **1080×1920 (9:16)**, PNG, under Play's 8 MB limit.
-- [ ] Three templates: `gradient` (caption top, device centered-bottom, gradient bg), `solid` (same layout, flat bg), `minimal` (no bezel, subtle shadow, caption top).
-- [ ] Bundle one open-license font (e.g. Inter) and one generic Android bezel asset in the package; render text with sharp's SVG compositing so output is deterministic across machines.
-- [ ] Idempotent: re-running produces byte-identical output for identical inputs (required for golden tests).
+- [x] Composites each `.vitrine/screenshots/raw/<id>.png` into a store-ready image: device bezel overlay, background (solid or 2-stop linear gradient), caption text above the device.
+- [x] Output: `.vitrine/screenshots/framed/<id>.png` at **1080×1920 (9:16)**, PNG, under Play's 8 MB limit.
+- [x] Three templates: `gradient` (caption top, device centered-bottom, gradient bg), `solid` (same layout, flat bg), `minimal` (no bezel, subtle shadow, caption top).
+- [x] Bundle one open-license font (Inter) in the package and render text and device bezel with sharp's SVG compositing for deterministic output. The device bezel is generated programmatically, not from a bundled image.
+- [x] Idempotent: re-running produces byte-identical output for identical inputs (required for golden tests).
 
 ### P0 — `publish`
 
@@ -229,6 +229,6 @@ Ship each milestone as a working increment — do not start `frame` until `captu
 
 ## Open Questions
 
-- **Bezel asset** (owner: dev): source an openly-licensed generic Android frame PNG, or generate a simple rounded-rect bezel programmatically in sharp? Programmatic is acceptable for v0 and avoids licensing questions — prefer it unless quality is unacceptable.
+- ~~**Bezel asset**~~ — resolved in milestone 2: generated programmatically in `sharp`/SVG (`src/frame/bezel.ts`), no bundled image asset.
 - **Config format** (non-blocking): `.ts` config is the default; decide during implementation whether to also accept `.json` for zero-tooling consumers.
 - **Play Console linking** (owner: repo owner, blocking for milestone 3 only): the OpenTofu module provisions the API + service account + key, but the Play Console invite/permission grant (see Infrastructure section) is manual and must happen before `publish --dry-run` can be tested.

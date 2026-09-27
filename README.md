@@ -5,14 +5,14 @@ Play Store screenshot pipeline CLI. Capture Android app screenshots with
 publish them to a Google Play listing via the Play Developer API — one command,
 no design tool, no fastlane.
 
-> **Status:** milestone 1 (`capture`) implemented. `frame` and `publish` land in
-> subsequent milestones.
+> **Status:** milestones 1–2 (`capture`, `frame`) implemented. `publish` is the
+> next milestone.
 
 ## How it works
 
 ```txt
 vitrine.config.ts ──► vitrine capture ──► .vitrine/screenshots/raw/*.png
-                          vitrine frame   ──► .vitrine/screenshots/framed/*.png   (soon)
+                          vitrine frame   ──► .vitrine/screenshots/framed/*.png
                           vitrine publish ──► Google Play listing               (soon)
 ```
 
@@ -216,6 +216,45 @@ Flow gotchas for Metro-backed debug builds:
 **Standalone builds:** for a release/preview APK that embeds the bundle (e.g.
 `expo run:android --variant release`, or an EAS `preview` build), set
 `device.devServer: false` — vitrine then skips the Metro wiring entirely.
+
+## Frame
+
+```bash
+npx vitrine frame                       # frame every configured screen
+npx vitrine frame --only home,profile   # frame a subset
+npx vitrine frame --config ./path/to/vitrine.config.ts
+```
+
+What it does:
+
+1. Loads and validates the config.
+2. For each selected screen, reads `.vitrine/screenshots/raw/<id>.png`
+   and/or `.vitrine/screenshots/raw/<id>-dark.png` (whichever exists —
+   see [Dark mode](#dark-mode)) and composites each into a 1080×1920 PNG at
+   `.vitrine/screenshots/framed/`.
+3. A screen with no raw file yet fails with a message telling you to
+   run `vitrine capture` first. The failure doesn't stop the rest of the run.
+4. Prints a summary table and exits non-zero if any screen failed.
+
+Three templates (`frame.template` in the config):
+
+| Template | Layout |
+| --- | --- |
+| `gradient` | Caption top, device bottom-centered in a plain rounded-rect bezel, two-stop gradient background. |
+| `solid` | Same layout as `gradient`, flat background color instead of a gradient. |
+| `minimal` | No bezel — a larger screenshot with a subtle drop shadow, caption top. |
+
+The device bezel is generated programmatically, not from a bundled image.
+The caption font (Inter, bundled under `assets/fonts/`, SIL OFL 1.1) is
+embedded directly into the rendered SVG. No system fonts are required, so
+output is identical across all machines and CI. Framing is idempotent:
+re-running on unchanged raw screenshots produces byte-identical PNGs.
+
+Layout follows the general App Store screenshot practices in
+[this guide](https://www.lappka.store/blog/app-store-screenshot-best-practices):
+one short benefit-led caption per screen, consistent device treatment, and
+consistent color system across the set. The screenshot gets more visual
+weight than the surrounding chrome.
 
 ## Dark mode
 
