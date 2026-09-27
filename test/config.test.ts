@@ -94,6 +94,25 @@ describe("configSchema", () => {
       result.success ? "" : result.error.issues.map((i) => i.message).join(),
     ).toMatch(/duplicate screen id "home"/);
   });
+
+  it("rejects a gradient background with the solid template", () => {
+    const result = configSchema.safeParse({
+      ...base,
+      frame: { template: "solid", background: ["#101010", "#202020"] },
+    });
+    expect(result.success).toBe(false);
+    expect(
+      result.success ? "" : result.error.issues.map((i) => i.message).join(),
+    ).toMatch(/template "solid" requires a single background color/);
+  });
+
+  it("rejects an unknown font", () => {
+    const result = configSchema.safeParse({
+      ...base,
+      frame: { background: "#101010", font: "Comic Sans" },
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("loadConfig", () => {

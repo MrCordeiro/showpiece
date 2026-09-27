@@ -42,13 +42,25 @@ export const configSchema = z.object({
     /** Metro bundler port (forwarded via `adb reverse`). */
     metroPort: z.number().int().min(1).max(65535).default(8081),
   }),
-  frame: z.object({
-    template: frameTemplateSchema.default("gradient"),
-    /** Solid color, or a two-stop linear gradient. */
-    background: z.union([hexColor, z.tuple([hexColor, hexColor])]),
-    textColor: hexColor.default("#ffffff"),
-    font: z.string().default("Inter"),
-  }),
+  frame: z
+    .object({
+      template: frameTemplateSchema.default("gradient"),
+      /** Solid color, or a two-stop linear gradient. */
+      background: z.union([hexColor, z.tuple([hexColor, hexColor])]),
+      textColor: hexColor.default("#ffffff"),
+      /** v0 ships exactly one bundled font — see src/frame/font.ts. */
+      font: z.enum(["Inter"]).default("Inter"),
+    })
+    .superRefine((frame, ctx) => {
+      if (frame.template === "solid" && Array.isArray(frame.background)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'template "solid" requires a single background color, not a two-stop gradient — use frame.background: "#rrggbb"',
+          path: ["background"],
+        });
+      }
+    }),
   publish: z.object({
     serviceAccountKeyPath: z
       .string()
