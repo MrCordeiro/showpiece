@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import type { Appearance, Config, ScreenConfig } from "../config/schema.js";
 import { assertToolInstalled } from "../util/exec.js";
-import { type CaptureResult, printSummary } from "../util/report.js";
+import { type StepResult, printSummary } from "../util/report.js";
 import {
   assertMetroRunning,
   ensureApp,
@@ -142,7 +142,7 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
   }
 
   const rawDir = resolve(config.screenshotsDir, "raw");
-  const results: CaptureResult[] = [];
+  const results: StepResult[] = [];
 
   try {
     for (const screen of screens) {
@@ -162,7 +162,7 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
     await restoreNightMode(serial, previousNightMode);
   }
 
-  const failures = printSummary(results);
+  const failures = printSummary("Capture", results);
   return failures > 0 ? 1 : 0;
 }
 

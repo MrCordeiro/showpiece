@@ -17,7 +17,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "assets"],
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
@@ -35,12 +35,15 @@
     "commander": "^12.1.0",
     "execa": "^9.5.1",
     "jiti": "^2.4.2",
+    "sharp": "^0.35.4",
     "yaml": "^2.6.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@fontsource/inter": "^5.3.0",
     "@types/node": "^20.19.43",
+    "pixelmatch": "^7.2.0",
     "tsdown": "^0.22.9",
     "typescript": "^5.7.2",
     "unrun": "^0.3.1",
