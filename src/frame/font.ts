@@ -1,6 +1,15 @@
+// src/frame/font.ts
 import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+// fontkit is CJS-only (`main: "dist/main.cjs"`, no ESM export), so it's
+// loaded via createRequire rather than a static `import` — a plain
+// `import fontkit from "fontkit"` fails with "does not provide an export
+// named 'default'" under this project's ESM/NodeNext setup.
+const require = createRequire(import.meta.url);
+const fontkit = require("fontkit") as { create: (buffer: Buffer) => unknown };
 
 /**
  * Walk up from `startDir` looking for `assets/<relativePath>`. Bundled
@@ -29,10 +38,39 @@ export function findAssetPath(
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * The narrow slice of fontkit's real runtime API this codebase depends on.
+ * `@types/fontkit`'s own declarations leave `GlyphRun`/`Glyph`/`Path` as
+ * empty interfaces (no members), so those upstream types can't be used
+ * directly — this local shape is verified against fontkit 2.0.4's actual
+ * behavior (see caption.ts for how it's used).
+ */
+export interface FontkitPath {
+  scale(sx: number, sy: number): FontkitPath;
+  translate(x: number, y: number): FontkitPath;
+  toSVG(): string;
+}
+export interface FontkitGlyph {
+  path: FontkitPath;
+}
+export interface FontkitGlyphPosition {
+  xAdvance: number;
+}
+export interface FontkitGlyphRun {
+  glyphs: FontkitGlyph[];
+  positions: FontkitGlyphPosition[];
+  advanceWidth: number;
+}
+export interface FontkitFont {
+  familyName: string;
+  unitsPerEm: number;
+  layout(text: string): FontkitGlyphRun;
+}
+
 export interface FontAsset {
   family: string;
-  regularDataUri: string;
-  boldDataUri: string;
+  regular: FontkitFont;
+  bold: FontkitFont;
 }
 
 /** v0 ships exactly one font; configSchema's `frame.font` enum (Task 2) keeps this in sync. */
@@ -40,12 +78,12 @@ const FONTS: Record<string, { regular: string; bold: string }> = {
   Inter: { regular: "Inter-Regular.woff2", bold: "Inter-Bold.woff2" },
 };
 
-function toDataUri(path: string): string {
-  const base64 = readFileSync(path).toString("base64");
-  return `data:font/woff2;base64,${base64}`;
+function parseFont(path: string): FontkitFont {
+  const buffer = readFileSync(path);
+  return fontkit.create(buffer) as unknown as FontkitFont;
 }
 
-/** Load a bundled font by name for SVG `@font-face` embedding. */
+/** Load a bundled font by name for glyph-outline extraction (see caption.ts). */
 export function loadFont(name: string): FontAsset {
   const files = FONTS[name];
   if (!files) {
@@ -55,7 +93,7 @@ export function loadFont(name: string): FontAsset {
   }
   return {
     family: name,
-    regularDataUri: toDataUri(findAssetPath(`fonts/${files.regular}`, HERE)),
-    boldDataUri: toDataUri(findAssetPath(`fonts/${files.bold}`, HERE)),
+    regular: parseFont(findAssetPath(`fonts/${files.regular}`, HERE)),
+    bold: parseFont(findAssetPath(`fonts/${files.bold}`, HERE)),
   };
 }

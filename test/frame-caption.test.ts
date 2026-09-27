@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fitCaption, renderCaptionSvg } from "../src/frame/caption.js";
-import type { FontAsset } from "../src/frame/font.js";
+import { loadFont } from "../src/frame/font.js";
 
 describe("fitCaption", () => {
   it("keeps a short caption on one line at the largest size", () => {
@@ -45,24 +45,40 @@ describe("fitCaption", () => {
 });
 
 describe("renderCaptionSvg", () => {
-  const font: FontAsset = {
-    family: "Inter",
-    regularDataUri: "data:font/woff2;base64,AAAA",
-    boldDataUri: "data:font/woff2;base64,BBBB",
-  };
+  // A real, already-vendored font — a hand-rolled mock object can't prove
+  // glyph-outline rendering actually works, which is the whole point of
+  // this rework.
+  const font = loadFont("Inter");
 
-  it("embeds the bold font and the requested text color", () => {
+  it("renders glyph-outline paths, not <text>/@font-face (the librsvg limitation this replaced)", () => {
     const svg = renderCaptionSvg("Track everything", "#ffffff", font);
-    expect(svg).toContain(font.boldDataUri);
-    expect(svg).toContain("fill: #ffffff");
+    expect(svg).toContain("<path");
+    expect(svg).not.toContain("<text");
+    expect(svg).not.toContain("font-family");
+    expect(svg).not.toContain("@font-face");
+  });
+
+  it("uses the requested text color as an SVG fill attribute", () => {
+    const svg = renderCaptionSvg("Track everything", "#ffffff", font);
+    expect(svg).toContain('fill="#ffffff"');
   });
 
   it("returns undefined for an empty caption (no layer to composite)", () => {
     expect(renderCaptionSvg("", "#ffffff", font)).toBeUndefined();
   });
 
-  it("escapes markup-significant characters in the caption text", () => {
-    const svg = renderCaptionSvg("A & B <script>", "#fff", font);
-    expect(svg).toContain("A &amp; B &lt;script&gt;");
+  it("renders captions containing special characters without escaping issues (text becomes glyph paths, not XML content)", () => {
+    const svg = renderCaptionSvg('A & B <script> "quoted"', "#fff", font);
+    expect(svg).toContain("<path");
+    expect(svg).toMatch(/<svg[\s\S]*<\/svg>/);
+  });
+
+  it("wraps a long caption onto two <path> lines", () => {
+    const svg = renderCaptionSvg(
+      "Find every idea fast across all your notes and notebooks",
+      "#ffffff",
+      font,
+    );
+    expect(svg?.match(/<path/g)?.length).toBe(2);
   });
 });

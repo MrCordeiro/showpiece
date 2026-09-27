@@ -26,14 +26,17 @@ describe("findAssetPath", () => {
 });
 
 describe("loadFont", () => {
-  it("loads the bundled Inter font as base64 woff2 data URIs", () => {
+  it("loads the bundled Inter font with real glyph metrics", () => {
     const font = loadFont("Inter");
     expect(font.family).toBe("Inter");
-    expect(font.regularDataUri.startsWith("data:font/woff2;base64,")).toBe(
-      true,
-    );
-    expect(font.boldDataUri.startsWith("data:font/woff2;base64,")).toBe(true);
-    expect(font.regularDataUri.length).toBeGreaterThan(1000);
+    expect(font.regular.unitsPerEm).toBeGreaterThan(0);
+    expect(font.bold.unitsPerEm).toBeGreaterThan(0);
+    expect(typeof font.bold.layout).toBe("function");
+
+    const run = font.bold.layout("Ag");
+    expect(run.glyphs.length).toBeGreaterThan(0);
+    expect(run.positions.length).toBe(run.glyphs.length);
+    expect(run.advanceWidth).toBeGreaterThan(0);
   });
 
   it("throws a clear error for an unknown font name", () => {
