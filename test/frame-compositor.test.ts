@@ -62,6 +62,20 @@ describe("composeFrame", () => {
     ).resolves.toBeInstanceOf(Buffer);
   });
 
+  it("never produces an alpha channel (Play rejects PNGs with transparency)", async () => {
+    const raw = await tinyRaw(400, 800);
+    const buffer = await composeFrame({
+      raw,
+      template: "gradient",
+      background: ["#1a1a2e", "#16213e"],
+      textColor: "#ffffff",
+      caption: "Track everything",
+      font: "Inter",
+    });
+    const meta = await sharp(buffer).metadata();
+    expect(meta.hasAlpha).toBe(false);
+  });
+
   it("supports all three templates without throwing", async () => {
     const raw = await tinyRaw(400, 800);
     for (const template of ["gradient", "solid", "minimal"] as const) {

@@ -40,10 +40,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 /**
  * The narrow slice of fontkit's real runtime API this codebase depends on.
- * `@types/fontkit`'s own declarations leave `GlyphRun`/`Glyph`/`Path` as
- * empty interfaces (no members), so those upstream types can't be used
- * directly — this local shape is verified against fontkit 2.0.4's actual
- * behavior (see caption.ts for how it's used).
+ * fontkit ships no `@types/fontkit` package and no bundled type
+ * declarations, so this local shape is hand-written and verified against
+ * fontkit 2.0.4's actual runtime behavior (see caption.ts for how it's used).
  */
 export interface FontkitPath {
   scale(sx: number, sy: number): FontkitPath;
@@ -65,6 +64,7 @@ export interface FontkitFont {
   familyName: string;
   unitsPerEm: number;
   layout(text: string): FontkitGlyphRun;
+  hasGlyphForCodePoint(codePoint: number): boolean;
 }
 
 export interface FontAsset {

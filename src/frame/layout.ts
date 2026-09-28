@@ -22,9 +22,16 @@ export const BEZEL_BORDER = 22;
 export const BEZEL_OUTER_RADIUS = 56;
 export const BEZEL_INNER_RADIUS = 34;
 
-/** minimal has no bezel silhouette to respect, so its box just fills the available width. */
-const MINIMAL_SIDE_MARGIN = 48;
+/** minimal has no bezel silhouette to respect, so its box uses a wider aspect
+ * ratio than the bezel templates instead of a fixed side margin. */
 export const MINIMAL_CORNER_RADIUS = 40;
+
+/** Real device screenshots run roughly 0.45-0.56 (width:height); this is
+ * mid-range so "cover"-fit cropping stays modest across that range, while
+ * still being visibly wider than the bezel templates' stylized 9/19.5≈0.46
+ * silhouette (getScreenBox keeps "minimal wider than the bezel templates"
+ * true either way — verify this with the existing layout test). */
+const MINIMAL_ASPECT = 0.52;
 
 export interface Box {
   x: number;
@@ -36,13 +43,9 @@ export interface Box {
 /** The rect where the raw screenshot itself is drawn (inside any bezel). */
 export function getScreenBox(template: FrameTemplate): Box {
   if (template === "minimal") {
-    const width = CANVAS_WIDTH - MINIMAL_SIDE_MARGIN * 2;
-    return {
-      x: MINIMAL_SIDE_MARGIN,
-      y: DEVICE_TOP,
-      width,
-      height: DEVICE_AVAILABLE_HEIGHT,
-    };
+    const width = Math.round(DEVICE_AVAILABLE_HEIGHT * MINIMAL_ASPECT);
+    const x = Math.round((CANVAS_WIDTH - width) / 2);
+    return { x, y: DEVICE_TOP, width, height: DEVICE_AVAILABLE_HEIGHT };
   }
   const width = Math.round(DEVICE_AVAILABLE_HEIGHT * BEZEL_DEVICE_ASPECT);
   const x = Math.round((CANVAS_WIDTH - width) / 2);

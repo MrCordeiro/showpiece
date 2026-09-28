@@ -41,31 +41,45 @@ function wrap(
   return lines;
 }
 
-function truncate(
+/**
+ * Truncates `line` to fit `maxWidth`, appending an ellipsis. If `line`
+ * already fits and `forceEllipsis` is false, returns it unchanged.
+ * `forceEllipsis` is set on the last kept line when wrapping produced more
+ * lines than fit — it shows that content was dropped even when that last
+ * line's own text already fits within `maxWidth`.
+ */
+function truncateLine(
   line: string,
   fontSize: number,
   maxWidth: number,
   measureWidth: MeasureWidth,
+  forceEllipsis: boolean,
 ): string {
-  if (measureWidth(line, fontSize) <= maxWidth) return line;
+  const alreadyFits = measureWidth(line, fontSize) <= maxWidth;
+  if (alreadyFits && !forceEllipsis) return line;
+  if (alreadyFits && measureWidth(`${line}…`, fontSize) <= maxWidth) {
+    return `${line}…`;
+  }
   let end = line.length;
   while (
-    end > 1 &&
+    end > 0 &&
     measureWidth(`${line.slice(0, end)}…`, fontSize) > maxWidth
   ) {
     end--;
   }
-  return `${line.slice(0, end)}…`;
+  return end > 0 ? `${line.slice(0, end)}…` : "…";
 }
 
 /**
  * Picks the largest font size (from {@link FONT_SIZES}) that wraps `text`
  * into at most {@link MAX_LINES} lines fitting within `maxWidth`/`maxHeight`.
- * Never throws. Width is always safe: the smallest size truncates its last
- * line with an ellipsis as a last resort. Height in that fallback path is
- * bounded only by `smallest font size × MAX_LINES`, not checked against
- * `maxHeight` — callers must ensure `maxHeight` is generous enough for that
- * worst case (in this codebase it always is: 40×1.25×2=100 ≤
+ * Never throws. Every returned line is truncated to fit `maxWidth`: at the
+ * smallest size, each kept line is checked individually, and the last kept
+ * line gets an ellipsis whenever wrapping produced more lines than were
+ * kept, even if that line's own text already fits. Height in that fallback
+ * path is bounded only by `smallest font size × MAX_LINES`, not checked
+ * against `maxHeight` — callers must ensure `maxHeight` is generous enough
+ * for that worst case (in this codebase it always is: 40×1.25×2=100 ≤
  * CAPTION_HEIGHT=240).
  *
  * `measureWidth` defaults to a fixed-ratio heuristic so this function stays
@@ -90,17 +104,39 @@ export function fitCaption(
     }
   }
   const fontSize = FONT_SIZES[FONT_SIZES.length - 1] as number;
-  const lines = lastWrapped.slice(0, MAX_LINES);
-  const lastIndex = lines.length - 1;
-  if (lastIndex >= 0) {
-    lines[lastIndex] = truncate(
-      lines[lastIndex] as string,
+  const kept = lastWrapped.slice(0, MAX_LINES);
+  const droppedContent = lastWrapped.length > MAX_LINES;
+  const lines = kept.map((line, i) =>
+    truncateLine(
+      line,
       fontSize,
       maxWidth,
       measureWidth,
+      droppedContent && i === kept.length - 1,
+    ),
+  );
+  return { fontSize, lines };
+}
+
+/**
+ * Throws if `text` contains a character `font` has no glyph for. Whitespace
+ * is skipped: `wrap()` splits on `/\s+/` and rejoins with a single space, so
+ * raw whitespace characters (e.g. a literal newline) are never themselves
+ * drawn as glyphs, even when the font lacks a glyph for them.
+ */
+function assertGlyphsCovered(text: string, font: FontkitFont): void {
+  const missing = new Set<string>();
+  for (const char of text) {
+    if (/\s/.test(char)) continue;
+    if (!font.hasGlyphForCodePoint(char.codePointAt(0) as number)) {
+      missing.add(char);
+    }
+  }
+  if (missing.size > 0) {
+    throw new Error(
+      `Caption contains characters the bundled Inter font doesn't support: ${[...missing].join(", ")}. Use plain Latin text (multi-locale font support isn't built yet).`,
     );
   }
-  return { fontSize, lines };
 }
 
 function escapeAttr(value: string): string {
@@ -155,6 +191,7 @@ export function renderCaptionSvg(
   textColor: string,
   font: FontAsset,
 ): string | undefined {
+  assertGlyphsCovered(text, font.bold);
   const maxWidth = CANVAS_WIDTH - CAPTION_MARGIN_X * 2;
   const measure = measurerFor(font.bold);
   const { fontSize, lines } = fitCaption(

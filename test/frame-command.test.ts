@@ -110,6 +110,41 @@ describe("runFrame", () => {
     expect(existsSync(join(screenshotsDir, "framed"))).toBe(true); // dir still created
   });
 
+  it("frames a screen with a raw file even when a sibling screen has none, and reports the missing one clearly", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));
+    // "profile" has no raw file and should fail on its own, without
+    // stopping "home" from framing successfully.
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({
+        screenshotsDir,
+        screens: [
+          { id: "home", flow: "home.yaml", caption: "Track everything" },
+          { id: "profile", flow: "profile.yaml", caption: "Your data" },
+        ],
+      }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const writeSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    const { runFrame } = await import("../src/frame/command.js");
+    const exitCode = await runFrame({});
+
+    const output = writeSpy.mock.calls.map((call) => String(call[0])).join("");
+    writeSpy.mockRestore();
+
+    expect(exitCode).toBe(1);
+    expect(existsSync(join(screenshotsDir, "framed", "home.png"))).toBe(true);
+    expect(existsSync(join(screenshotsDir, "framed", "profile.png"))).toBe(
+      false,
+    );
+    expect(output).toContain("vitrine capture");
+  });
+
   it("honors --only, skipping screens not selected", async () => {
     const { loadConfig } = await import("../src/config/load.js");
     await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));

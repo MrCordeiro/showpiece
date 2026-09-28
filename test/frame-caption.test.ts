@@ -42,6 +42,27 @@ describe("fitCaption", () => {
     expect(result.lines.length).toBeLessThanOrEqual(2);
     expect(result.lines.at(-1)).toMatch(/…$/);
   });
+
+  it("truncates every overflowing line, not just the last one", () => {
+    const result = fitCaption(
+      "Supercalifragilisticexpialidociousextraordinaryapp reallylongsecondword",
+      300,
+      100,
+    );
+    for (const line of result.lines) {
+      expect(line.length * result.fontSize * 0.58).toBeLessThanOrEqual(300);
+    }
+  });
+
+  it("adds an ellipsis to the last kept line when wrapping drops extra lines, even if that line itself fits", () => {
+    const result = fitCaption(
+      "one two three four five six seven eight nine ten eleven twelve",
+      200,
+      80,
+    );
+    expect(result.lines.length).toBeLessThanOrEqual(2);
+    expect(result.lines.at(-1)).toMatch(/…$/);
+  });
 });
 
 describe("renderCaptionSvg", () => {
@@ -80,5 +101,12 @@ describe("renderCaptionSvg", () => {
       font,
     );
     expect(svg?.match(/<path/g)?.length).toBe(2);
+  });
+
+  it("throws a clear error for characters the bundled font doesn't support", () => {
+    const font = loadFont("Inter");
+    expect(() => renderCaptionSvg("日本語", "#fff", font)).toThrow(
+      /characters the bundled Inter font doesn't support/,
+    );
   });
 });

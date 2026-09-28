@@ -36,7 +36,7 @@ vitrine.config.ts ──► capture ──► .vitrine/screenshots/raw/*.png
 - **CLI framework**: `commander`
 - **Config validation**: `zod` (config is a `.ts` file loaded via `jiti` or `tsx`, exporting a typed object)
 - **Capture**: shells out to `maestro` and `adb` (both assumed installed; fail with actionable error messages if missing)
-- **Framing**: `sharp` for compositing; no headless browser
+- **Framing**: `sharp` for compositing, `fontkit` for glyph-outline caption text (added during implementation); no headless browser
 - **Publish**: direct Google Play Developer API (`adroidpublisher v3`) via `googleapis`, service-account JSON auth.
 
 Each command must be independently runnable and independently useful.

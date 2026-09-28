@@ -115,8 +115,12 @@ export async function composeFrame(input: ComposeFrameInput): Promise<Buffer> {
     }
   }
 
-  return sharp(background)
-    .composite(layers)
-    .png({ compressionLevel: 9 })
-    .toBuffer();
+  // .flatten() must run in a separate sharp() call after compositing:
+  // sharp's operations run in a fixed pipeline order rather than call
+  // order, and .composite() re-adds an alpha channel to the base image
+  // even when chained after .flatten() — verified empirically (hasAlpha
+  // stayed true when flatten was chained before .toBuffer() in the same
+  // pipeline as .composite()).
+  const composited = await sharp(background).composite(layers).png().toBuffer();
+  return sharp(composited).flatten().png({ compressionLevel: 9 }).toBuffer();
 }

@@ -245,10 +245,11 @@ Three templates (`frame.template` in the config):
 | `minimal` | No bezel — a larger screenshot with a subtle drop shadow, caption top. |
 
 The device bezel is generated programmatically, not from a bundled image.
-The caption font (Inter, bundled under `assets/fonts/`, SIL OFL 1.1) is
-embedded directly into the rendered SVG. No system fonts are required, so
-output is identical across all machines and CI. Framing is idempotent:
-re-running on unchanged raw screenshots produces byte-identical PNGs.
+Caption text is drawn as literal SVG glyph-outline paths, extracted from the
+bundled font (Inter, under `assets/fonts/`, SIL OFL 1.1) with the `fontkit`
+library. No embedded font file and no system fonts are required, so output
+is identical across all machines and CI. Framing is idempotent: re-running
+on unchanged raw screenshots produces byte-identical PNGs.
 
 Layout follows the general App Store screenshot practices in
 [this guide](https://www.lappka.store/blog/app-store-screenshot-best-practices):

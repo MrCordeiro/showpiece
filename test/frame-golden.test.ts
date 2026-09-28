@@ -56,6 +56,7 @@ describe("frame golden images", () => {
         a.info.height,
         {
           threshold: 0,
+          includeAA: true,
         },
       );
       expect(diff).toBe(0);
