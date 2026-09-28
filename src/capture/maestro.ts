@@ -114,7 +114,7 @@ export async function runFlow(
   screen: ScreenConfig,
   options: RunFlowOptions,
 ): Promise<string> {
-  const baseName = createOutputFileName(screen.id, options.appearance);
+  const baseName = outputBaseName(screen.id, options.appearance);
   const screenDiagDir = await ensureScreenDiagnosticsDir(
     options.diagnosticsDir,
     baseName,
