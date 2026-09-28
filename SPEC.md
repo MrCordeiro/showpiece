@@ -139,6 +139,15 @@ Convention: each flow's `takeScreenshot` name must match the screen `id`. `captu
 - [x] Bundle one open-license font (Inter) in the package and render text and device bezel with sharp's SVG compositing for deterministic output. The device bezel is generated programmatically, not from a bundled image.
 - [x] Idempotent: re-running produces byte-identical output for identical inputs (required for golden tests).
 
+### P0 — `polished frame`
+
+- [ ] Replace the existing simple device frame with a detailed, premium, matte black aluminum phone frame (e.g., modern premium hardware).
+- [ ] Significantly enlarge the entire device within the viewport, reducing the left and right padding to be minimal (e.g., approx 5% of the total width) so the device nearly fills the canvas horizontally.
+- [ ] Position the device lower so that the bottom part of the physical frame is clipped off the edge of the viewport, giving the sense of the device extending continuously downward.
+- [ ] All the exterior background color to be selected by a hex code or predefined theme.
+- [ ] Allow for an optiona subtitle
+- [ ] Use a strong, simple headline/subheadline treatment, generous whitespace, tighter composition, and more intentional spacing so the screenshot feels like an App Store marketing asset rather than a raw app capture.
+
 ### P0 — `publish`
 
 - [ ] Auths with a service account key; clear error if key invalid or lacks permissions.
