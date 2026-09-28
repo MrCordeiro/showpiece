@@ -74,6 +74,17 @@ export const configSchema = z.object({
     .min(1, "screenshotsDir must not be empty")
     .default(".vitrine/screenshots"),
   /**
+   * Base dir for per-screen troubleshooting evidence (Maestro's failure
+   * screenshot, view hierarchy, command log). Same lifecycle as `raw/`: a run
+   * only writes the screens it attempted, replacing that screen's previous
+   * directory. See `<diagnosticsDir>/last-run.json` for the machine-readable
+   * summary of the most recent run.
+   */
+  diagnosticsDir: z
+    .string()
+    .min(1, "diagnosticsDir must not be empty")
+    .default(".vitrine/diagnostics"),
+  /**
    * System UI mode the device is put into before capturing. `"dark"` also
    * suffixes every output file with `-dark`, so both appearances can coexist
    * in one output dir. Requires the app itself to follow the system

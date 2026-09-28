@@ -4,6 +4,7 @@ coverage/
 
 # Capture/frame output
 .vitrine/screenshots/
+.vitrine/diagnostics/
 
 # Play publishing credentials (never commit)
 secrets/

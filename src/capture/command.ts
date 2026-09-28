@@ -1,8 +1,14 @@
+import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import type { Appearance, Config, ScreenConfig } from "../config/schema.js";
+import { VitrineError, errorInfo } from "../util/errors.js";
 import { assertToolInstalled } from "../util/exec.js";
-import { type StepResult, printSummary } from "../util/report.js";
+import {
+  type StepResult,
+  printSummary,
+  writeRunReport,
+} from "../util/report.js";
 import {
   assertMetroRunning,
   ensureApp,
@@ -12,6 +18,7 @@ import {
   setNightMode,
   setupMetroReverse,
 } from "./device.js";
+import { outputBaseName } from "./diagnostics.js";
 import { runFlow } from "./maestro.js";
 
 export interface CaptureOptions {
@@ -23,6 +30,8 @@ export interface CaptureOptions {
   serial?: string;
   /** UI mode override (`--appearance`), beating the configured value. */
   appearance?: string;
+  /** Empty the raw output directory before capturing (`--clean`). */
+  clean?: boolean;
 }
 
 /**
@@ -41,7 +50,8 @@ export function selectScreens(
   const known = new Set(screens.map((s) => s.id));
   const unknown = wanted.filter((id) => !known.has(id));
   if (unknown.length > 0) {
-    throw new Error(
+    throw new VitrineError(
+      "E_UNKNOWN_SCREEN_ID",
       `Unknown screen id(s) in --only: ${unknown.join(", ")}. ` +
         `Known ids: ${[...known].join(", ")}.`,
     );
@@ -63,7 +73,8 @@ export function resolveAppearance(
   if (flag === undefined) return configured;
   const match = APPEARANCES.find((value) => value === flag);
   if (!match) {
-    throw new Error(
+    throw new VitrineError(
+      "E_INVALID_APPEARANCE",
       `Invalid --appearance "${flag}". Expected one of: ${APPEARANCES.join(
         ", ",
       )}.`,
@@ -96,7 +107,7 @@ async function restoreNightMode(
  * Run the `capture` command. Returns a process exit code (0 = all captured).
  */
 export async function runCapture(options: CaptureOptions): Promise<number> {
-  const { config } = await loadConfig(options.config);
+  const { config, configPath } = await loadConfig(options.config);
 
   // Validate the screen selection against config before touching any tooling.
   const screens = selectScreens(config.screens, options.only);
@@ -144,17 +155,48 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
   const rawDir = resolve(config.screenshotsDir, "raw");
   const results: StepResult[] = [];
 
+  if (options.clean) {
+    if (options.only) {
+      process.stderr.write(
+        `\n⚠ --clean empties ${rawDir} and ${config.diagnosticsDir}, including screens outside --only that this run will not re-capture.\n`,
+      );
+    }
+    await rm(rawDir, { recursive: true, force: true });
+    await rm(config.diagnosticsDir, { recursive: true, force: true });
+  }
+
+  const startedAt = new Date().toISOString();
   try {
     for (const screen of screens) {
       process.stdout.write(`\n▶ Capturing "${screen.id}" (${screen.flow})\n`);
+      const diagnosticsDir = resolve(
+        config.diagnosticsDir,
+        outputBaseName(screen.id, appearance),
+      );
       try {
-        const path = await runFlow(screen, { rawDir, serial, appearance });
-        results.push({ id: screen.id, status: "captured", path });
+        const path = await runFlow(screen, {
+          rawDir,
+          diagnosticsDir: config.diagnosticsDir,
+          serial,
+          appearance,
+          packageName: config.app.packageName,
+          devServer: config.device.devServer,
+          metroPort: config.device.metroPort,
+        });
+        results.push({
+          id: screen.id,
+          status: "captured",
+          path,
+          diagnosticsDir,
+        });
       } catch (error) {
+        const info = errorInfo(error);
         results.push({
           id: screen.id,
           status: "failed",
-          error: error instanceof Error ? error.message : String(error),
+          error: info.message,
+          code: info.code,
+          diagnosticsDir,
         });
       }
     }
@@ -162,7 +204,19 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
     await restoreNightMode(serial, previousNightMode);
   }
 
-  const failures = printSummary("Capture", results);
+  const failures = printSummary(results);
+  const reportPath = await writeRunReport({
+    diagnosticsDir: config.diagnosticsDir,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    appearance,
+    serial,
+    configPath,
+    packageName: config.app.packageName,
+    results,
+  });
+  process.stdout.write(`\nRun report: ${reportPath}\n`);
+
   return failures > 0 ? 1 : 0;
 }
 

@@ -27,6 +27,7 @@ describe("configSchema", () => {
     expect(parsed.publish.track).toBe("listing");
     expect(parsed.screens[0]?.caption).toBe("");
     expect(parsed.screenshotsDir).toBe(".vitrine/screenshots");
+    expect(parsed.diagnosticsDir).toBe(".vitrine/diagnostics");
     expect(parsed.appearance).toBe("light");
   });
 
@@ -132,9 +133,10 @@ describe("loadConfig", () => {
     expect(isAbsolute(config.publish.serviceAccountKeyPath)).toBe(true);
     expect(configPath).toBe(join(fixtures, "valid.config.json"));
 
-    // screenshotsDir defaults to a namespace under .vitrine and resolves
-    // against the config file's directory, not process.cwd().
+    // screenshotsDir/diagnosticsDir default to a namespace under .vitrine and
+    // resolve against the config file's directory, not process.cwd().
     expect(config.screenshotsDir).toBe(join(fixtures, ".vitrine/screenshots"));
+    expect(config.diagnosticsDir).toBe(join(fixtures, ".vitrine/diagnostics"));
   });
 
   it("resolves an overridden screenshotsDir against configDir, not cwd", async () => {

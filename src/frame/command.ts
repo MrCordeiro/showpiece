@@ -93,6 +93,6 @@ export async function runFrame(options: FrameOptions): Promise<number> {
     );
   }
 
-  const failures = printSummary("Frame", results);
+  const failures = printSummary(results, { title: "Frame summary" });
   return failures > 0 ? 1 : 0;
 }

@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { runCapture } from "./capture/command.js";
 import { runFrame } from "./frame/command.js";
+import { runSkillInstall } from "./skill/command.js";
 
 const program = new Command();
 
@@ -22,6 +23,7 @@ program
     "--appearance <mode>",
     "capture in light or dark mode (overrides the config value)",
   )
+  .option("--clean", "empty the raw output directory before capturing")
   .action(async (opts) => {
     try {
       process.exitCode = await runCapture(opts);
@@ -41,6 +43,27 @@ program
   .action(async (opts) => {
     try {
       process.exitCode = await runFrame(opts);
+    } catch (error) {
+      process.stderr.write(
+        `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+      process.exitCode = 1;
+    }
+  });
+
+const skill = program
+  .command("skill")
+  .description("Manage vitrine's bundled Claude Code skill.");
+
+skill
+  .command("install")
+  .description(
+    "Copy the bundled vitrine-flows skill into .claude/skills/ in this repo.",
+  )
+  .option("--force", "overwrite an already-installed copy")
+  .action(async (opts) => {
+    try {
+      process.exitCode = await runSkillInstall({ force: opts.force });
     } catch (error) {
       process.stderr.write(
         `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,

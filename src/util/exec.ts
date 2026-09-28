@@ -1,9 +1,11 @@
 import { type Options, execa } from "execa";
+import { VitrineError } from "./errors.js";
 
 export interface RunResult {
   stdout: string;
   stderr: string;
-  exitCode: number;
+  /** null when the process was terminated by a signal rather than exiting. */
+  exitCode: number | null;
 }
 
 /**
@@ -33,7 +35,8 @@ export async function assertToolInstalled(
   args?: string[],
 ): Promise<void> {
   if (!(await isToolInstalled(command, args))) {
-    throw new Error(
+    throw new VitrineError(
+      "E_TOOL_MISSING",
       `Required tool "${command}" was not found on PATH.\n  ${hint}`,
     );
   }
@@ -52,7 +55,9 @@ export async function run(
   return {
     stdout: typeof result.stdout === "string" ? result.stdout : "",
     stderr: typeof result.stderr === "string" ? result.stderr : "",
-    exitCode: result.exitCode ?? 0,
+    // A signal-killed process reports `undefined`, not 0 — preserve that
+    // distinction as `null` rather than defaulting to "succeeded".
+    exitCode: result.exitCode ?? null,
   };
 }
 

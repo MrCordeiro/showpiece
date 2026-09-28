@@ -29,6 +29,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
       track: "listing",
     },
     screenshotsDir: resolve(configDir, ".vitrine/screenshots"),
+    diagnosticsDir: resolve(configDir, ".vitrine/diagnostics"),
     appearance: "light",
     screens: [
       {
