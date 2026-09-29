@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runCapture } from "./capture/command.js";
+import { runFrame } from "./frame/command.js";
 import { runSkillInstall } from "./skill/command.js";
 
 const program = new Command();
@@ -26,6 +27,22 @@ program
   .action(async (opts) => {
     try {
       process.exitCode = await runCapture(opts);
+    } catch (error) {
+      process.stderr.write(
+        `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("frame")
+  .description("Composite raw screenshots into store-ready framed images.")
+  .option("-c, --config <path>", "path to the config file")
+  .option("--only <ids>", "comma-separated screen ids to frame a subset")
+  .action(async (opts) => {
+    try {
+      process.exitCode = await runFrame(opts);
     } catch (error) {
       process.stderr.write(
         `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,

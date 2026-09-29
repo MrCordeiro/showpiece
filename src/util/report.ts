@@ -1,12 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
-export type CaptureStatus = "captured" | "failed";
+export type StepStatus = "captured" | "framed" | "failed";
 
-export interface CaptureResult {
+export interface StepResult {
   id: string;
-  status: CaptureStatus;
-  /** Absolute path to the raw PNG when captured. */
+  status: StepStatus;
+  /** Absolute path to the output file when successful. */
   path?: string;
   /** Error message when failed. */
   error?: string;
@@ -21,13 +21,13 @@ const CROSS = "✗"; // ✗
 
 export interface PrintSummaryOptions {
   cwd?: string;
-  /** Defaults to "Capture summary" — `frame` will want its own title. */
+  /** Defaults to "Capture summary" — `frame` passes its own title. */
   title?: string;
 }
 
-/** Print a per-screen summary table. Returns the number of failures. */
+/** Print a per-item summary table. Returns the number of failures. */
 export function printSummary(
-  results: CaptureResult[],
+  results: StepResult[],
   options: PrintSummaryOptions = {},
 ): number {
   const cwd = options.cwd ?? process.cwd();
@@ -39,14 +39,14 @@ export function printSummary(
   process.stdout.write(`${"-".repeat(title.length)}\n`);
 
   for (const result of results) {
-    const mark = result.status === "captured" ? CHECK : CROSS;
+    const mark = result.status === "failed" ? CROSS : CHECK;
     const id = result.id.padEnd(width);
     const detail =
-      result.status === "captured"
-        ? result.path
+      result.status === "failed"
+        ? (result.error ?? "failed")
+        : result.path
           ? relative(cwd, result.path)
-          : ""
-        : (result.error ?? "failed");
+          : "";
     process.stdout.write(`${mark} ${id}  ${detail}\n`);
     if (result.status === "failed" && result.diagnosticsDir) {
       process.stdout.write(
@@ -55,9 +55,9 @@ export function printSummary(
     }
   }
 
-  const captured = results.length - failures;
+  const succeeded = results.length - failures;
   process.stdout.write(
-    `\n${results.length} screen(s) · ${captured} captured · ${failures} failed\n`,
+    `\n${results.length} screen(s) · ${succeeded} succeeded · ${failures} failed\n`,
   );
   return failures;
 }
@@ -70,7 +70,7 @@ export interface RunReport {
   serial: string;
   configPath: string;
   packageName: string;
-  screens: CaptureResult[];
+  screens: StepResult[];
   summary: { total: number; captured: number; failed: number };
 }
 
@@ -82,7 +82,7 @@ export interface WriteRunReportOptions {
   serial: string;
   configPath: string;
   packageName: string;
-  results: CaptureResult[];
+  results: StepResult[];
 }
 
 /**

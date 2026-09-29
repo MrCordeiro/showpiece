@@ -2,8 +2,8 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertFlowConvention,
-  extractScreenshotNames,
   createOutputFileName,
+  extractScreenshotNames,
 } from "../src/capture/maestro.js";
 import type { ScreenConfig } from "../src/config/schema.js";
 

@@ -72,7 +72,10 @@ export function assertFlowConvention(
  * `-dark` suffix so both appearances can live side by side in one output dir.
  * This is the naming convention `frame` and `publish` read back.
  */
-export function createOutputFileName(id: string, appearance: Appearance): string {
+export function createOutputFileName(
+  id: string,
+  appearance: Appearance,
+): string {
   return `${outputBaseName(id, appearance)}.png`;
 }
 
@@ -111,7 +114,7 @@ export async function runFlow(
   screen: ScreenConfig,
   options: RunFlowOptions,
 ): Promise<string> {
-  const baseName = createOutputFileName(screen.id, options.appearance);
+  const baseName = outputBaseName(screen.id, options.appearance);
   const screenDiagDir = await ensureScreenDiagnosticsDir(
     options.diagnosticsDir,
     baseName,

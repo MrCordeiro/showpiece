@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CaptureResult } from "../src/util/report.js";
+import type { StepResult } from "../src/util/report.js";
 
 vi.mock("node:fs/promises", () => ({
   mkdir: vi.fn(async () => undefined),
@@ -40,9 +40,23 @@ describe("printSummary", () => {
     expect(output).not.toContain("Capture summary");
   });
 
+  it("treats any non-failed status (e.g. frame's 'framed') as a success", async () => {
+    const { printSummary } = await import("../src/util/report.js");
+    const failures = printSummary(
+      [
+        { id: "home", status: "framed", path: "/x/home.png" },
+        { id: "profile", status: "failed", error: "no raw file" },
+      ],
+      { title: "Frame summary" },
+    );
+    expect(failures).toBe(1);
+    const output = stdoutSpy.mock.calls.map((c: unknown[]) => c[0]).join("");
+    expect(output).toContain("no raw file");
+  });
+
   it("prints the diagnostics path under a failed screen", async () => {
     const { printSummary } = await import("../src/util/report.js");
-    const results: CaptureResult[] = [
+    const results: StepResult[] = [
       {
         id: "home",
         status: "failed",
@@ -73,7 +87,7 @@ describe("writeRunReport", () => {
     const { writeRunReport } = await import("../src/util/report.js");
     const { mkdir, writeFile } = await import("node:fs/promises");
 
-    const results: CaptureResult[] = [
+    const results: StepResult[] = [
       { id: "home", status: "captured", path: "/raw/home.png" },
       { id: "profile", status: "failed", error: "boom", code: "E_FLOW_FAILED" },
     ];

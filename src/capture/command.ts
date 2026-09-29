@@ -5,7 +5,7 @@ import type { Appearance, Config, ScreenConfig } from "../config/schema.js";
 import { VitrineError, errorInfo } from "../util/errors.js";
 import { assertToolInstalled } from "../util/exec.js";
 import {
-  type CaptureResult,
+  type StepResult,
   printSummary,
   writeRunReport,
 } from "../util/report.js";
@@ -153,7 +153,7 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
   }
 
   const rawDir = resolve(config.screenshotsDir, "raw");
-  const results: CaptureResult[] = [];
+  const results: StepResult[] = [];
 
   if (options.clean) {
     if (options.only) {

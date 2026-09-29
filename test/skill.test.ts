@@ -1,3 +1,4 @@
+import { mkdtempSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -26,7 +27,13 @@ describe("findPackagedSkill", () => {
   });
 
   it("returns undefined when no ancestor has skills/vitrine-flows/SKILL.md", () => {
-    expect(findPackagedSkill("C:/")).toBeUndefined();
+    // A hardcoded drive root ("C:/") isn't a reliable "no such ancestor"
+    // sentinel cross-platform: on POSIX it isn't absolute, so `dirname`
+    // resolves it relative to cwd instead of stopping at a filesystem root.
+    // A real, isolated temp directory has a genuine, skill-free ancestor
+    // chain on every platform.
+    const isolated = mkdtempSync(join(tmpdir(), "vitrine-no-skill-"));
+    expect(findPackagedSkill(isolated)).toBeUndefined();
   });
 });
 

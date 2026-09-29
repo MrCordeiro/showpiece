@@ -36,7 +36,7 @@ vitrine.config.ts ──► capture ──► .vitrine/screenshots/raw/*.png
 - **CLI framework**: `commander`
 - **Config validation**: `zod` (config is a `.ts` file loaded via `jiti` or `tsx`, exporting a typed object)
 - **Capture**: shells out to `maestro` and `adb` (both assumed installed; fail with actionable error messages if missing)
-- **Framing**: `sharp` for compositing; no headless browser
+- **Framing**: `sharp` for compositing, `fontkit` for glyph-outline caption text (added during implementation); no headless browser
 - **Publish**: direct Google Play Developer API (`adroidpublisher v3`) via `googleapis`, service-account JSON auth.
 
 Each command must be independently runnable and independently useful.
@@ -133,11 +133,20 @@ Convention: each flow's `takeScreenshot` name must match the screen `id`. `captu
 
 ### P0 — `frame`
 
-- [ ] Composites each `.vitrine/screenshots/raw/<id>.png` into a store-ready image: device bezel overlay, background (solid or 2-stop linear gradient), caption text above the device.
-- [ ] Output: `.vitrine/screenshots/framed/<id>.png` at **1080×1920 (9:16)**, PNG, under Play's 8 MB limit.
-- [ ] Three templates: `gradient` (caption top, device centered-bottom, gradient bg), `solid` (same layout, flat bg), `minimal` (no bezel, subtle shadow, caption top).
-- [ ] Bundle one open-license font (e.g. Inter) and one generic Android bezel asset in the package; render text with sharp's SVG compositing so output is deterministic across machines.
-- [ ] Idempotent: re-running produces byte-identical output for identical inputs (required for golden tests).
+- [x] Composites each `.vitrine/screenshots/raw/<id>.png` into a store-ready image: device bezel overlay, background (solid or 2-stop linear gradient), caption text above the device.
+- [x] Output: `.vitrine/screenshots/framed/<id>.png` at **1080×1920 (9:16)**, PNG, under Play's 8 MB limit.
+- [x] Three templates: `gradient` (caption top, device centered-bottom, gradient bg), `solid` (same layout, flat bg), `minimal` (no bezel, subtle shadow, caption top).
+- [x] Bundle one open-license font (Inter) in the package and render text and device bezel with sharp's SVG compositing for deterministic output. The device bezel is generated programmatically, not from a bundled image.
+- [x] Idempotent: re-running produces byte-identical output for identical inputs (required for golden tests).
+
+### P0 — `polished frame`
+
+- [ ] Replace the existing simple device frame with a detailed, premium, matte black aluminum phone frame (e.g., modern premium hardware).
+- [ ] Significantly enlarge the entire device within the viewport, reducing the left and right padding to be minimal (e.g., approx 5% of the total width) so the device nearly fills the canvas horizontally.
+- [ ] Position the device lower so that the bottom part of the physical frame is clipped off the edge of the viewport, giving the sense of the device extending continuously downward.
+- [ ] All the exterior background color to be selected by a hex code or predefined theme.
+- [ ] Allow for an optiona subtitle
+- [ ] Use a strong, simple headline/subheadline treatment, generous whitespace, tighter composition, and more intentional spacing so the screenshot feels like an App Store marketing asset rather than a raw app capture.
 
 ### P0 — `publish`
 
@@ -235,6 +244,6 @@ Ship each milestone as a working increment — do not start `frame` until `captu
 
 ## Open Questions
 
-- **Bezel asset** (owner: dev): source an openly-licensed generic Android frame PNG, or generate a simple rounded-rect bezel programmatically in sharp? Programmatic is acceptable for v0 and avoids licensing questions — prefer it unless quality is unacceptable.
+- ~~**Bezel asset**~~ — resolved in milestone 2: generated programmatically in `sharp`/SVG (`src/frame/bezel.ts`), no bundled image asset.
 - **Config format** (non-blocking): `.ts` config is the default; decide during implementation whether to also accept `.json` for zero-tooling consumers.
 - **Play Console linking** (owner: repo owner, blocking for milestone 3 only): the OpenTofu module provisions the API + service account + key, but the Play Console invite/permission grant (see Infrastructure section) is manual and must happen before `publish --dry-run` can be tested.
