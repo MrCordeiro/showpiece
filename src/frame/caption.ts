@@ -177,6 +177,7 @@ export function fitText(
  * drawn as glyphs, even when the font lacks a glyph for them.
  */
 function assertGlyphsCovered(
+  field: "Caption" | "Subtitle",
   text: string,
   font: FontkitFont,
   family: string,
@@ -190,7 +191,7 @@ function assertGlyphsCovered(
   }
   if (missing.size > 0) {
     throw new Error(
-      `Caption contains characters the bundled ${family} font doesn't support: ${[...missing].join(", ")}. Use plain Latin text (multi-locale font support isn't built yet).`,
+      `${field} contains characters the bundled ${family} font doesn't support: ${[...missing].join(", ")}. Use plain Latin text (multi-locale font support isn't built yet).`,
     );
   }
 }
@@ -329,8 +330,8 @@ export interface TextInput extends TextSizes {
  */
 export function renderTextSvg(input: TextInput): string | undefined {
   const { font } = input;
-  assertGlyphsCovered(input.caption, font.headline, font.family);
-  assertGlyphsCovered(input.subtitle, font.body, font.family);
+  assertGlyphsCovered("Caption", input.caption, font.headline, font.family);
+  assertGlyphsCovered("Subtitle", input.subtitle, font.body, font.family);
 
   const headline = headlineFace(font);
   const subtitle = subtitleFace(font);

@@ -250,6 +250,14 @@ describe("demo mode", () => {
     ]);
   });
 
+  it("still restores the setting when the exit broadcast fails", async () => {
+    vi.mocked(run).mockRejectedValueOnce(new Error("adb: device offline"));
+    await expect(exitDemoMode("emulator-5554", "0")).rejects.toThrow(
+      "device offline",
+    );
+    expect(adbArgs()[1]).toContain("sysui_demo_allowed");
+  });
+
   it("restores the previous value on exit", async () => {
     await exitDemoMode("emulator-5554", "0");
     expect(adbArgs()[1]).toEqual([

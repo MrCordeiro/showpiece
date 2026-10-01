@@ -171,7 +171,7 @@ describe("renderTextSvg", () => {
       /characters the bundled Metropolis font doesn't support/,
     );
     expect(() => renderTextSvg({ ...base, subtitle: "日本語" })).toThrow(
-      /Metropolis/,
+      /^Subtitle contains characters the bundled Metropolis font/,
     );
   });
 });
