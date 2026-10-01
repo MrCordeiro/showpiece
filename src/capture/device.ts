@@ -404,3 +404,97 @@ export async function setNightMode(
     );
   }
 }
+
+const DEMO_MODE_ACTION = "com.android.systemui.demo";
+
+/**
+ * SystemUI demo mode commands. They give every capture the same status bar:
+ * a fixed clock, full signal and battery, and no notification icons, so the
+ * status bar does not change the pixels between runs.
+ */
+const DEMO_MODE_COMMANDS: string[][] = [
+  ["enter"],
+  ["clock", "-e", "hhmm", "0930"],
+  ["battery", "-e", "level", "100", "-e", "plugged", "false"],
+  ["network", "-e", "wifi", "hide"],
+  [
+    "network",
+    "-e",
+    "mobile",
+    "show",
+    "-e",
+    "datatype",
+    "none",
+    "-e",
+    "level",
+    "4",
+  ],
+  ["notifications", "-e", "visible", "false"],
+];
+
+async function sendDemoCommand(serial: string, command: string[]) {
+  const [name, ...extras] = command;
+  await run("adb", [
+    "-s",
+    serial,
+    "shell",
+    "am",
+    "broadcast",
+    "-a",
+    DEMO_MODE_ACTION,
+    "-e",
+    "command",
+    name as string,
+    ...extras,
+  ]);
+}
+
+/**
+ * Puts SystemUI into demo mode. Returns the previous value of the
+ * `sysui_demo_allowed` setting, which {@link exitDemoMode} restores.
+ * `"null"` means the setting did not exist.
+ */
+export async function enterDemoMode(serial: string): Promise<string> {
+  const { stdout } = await run("adb", [
+    "-s",
+    serial,
+    "shell",
+    "settings",
+    "get",
+    "global",
+    "sysui_demo_allowed",
+  ]);
+  const previousAllowed = stdout.trim() || "null";
+  try {
+    await run("adb", [
+      "-s",
+      serial,
+      "shell",
+      "settings",
+      "put",
+      "global",
+      "sysui_demo_allowed",
+      "1",
+    ]);
+    for (const command of DEMO_MODE_COMMANDS) {
+      await sendDemoCommand(serial, command);
+    }
+  } catch (error) {
+    await exitDemoMode(serial, previousAllowed).catch(() => undefined);
+    throw error;
+  }
+  return previousAllowed;
+}
+
+/** Leaves demo mode and restores `sysui_demo_allowed` to `previousAllowed`. */
+export async function exitDemoMode(
+  serial: string,
+  previousAllowed: string,
+): Promise<void> {
+  await sendDemoCommand(serial, ["exit"]);
+  const restore =
+    previousAllowed === "null"
+      ? ["delete", "global", "sysui_demo_allowed"]
+      : ["put", "global", "sysui_demo_allowed", previousAllowed];
+  await run("adb", ["-s", serial, "shell", "settings", ...restore]);
+}

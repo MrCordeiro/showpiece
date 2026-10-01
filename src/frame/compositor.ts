@@ -1,24 +1,25 @@
 import sharp, { type OverlayOptions } from "sharp";
 import type { FrameTemplate } from "../config/schema.js";
 import { type Background, renderBackgroundSvg } from "./background.js";
-import { renderBezelSvg } from "./bezel.js";
-import { renderCaptionSvg } from "./caption.js";
+import { bezelStyleFor, renderBezelSvg } from "./bezel.js";
+import { type TextSizes, renderTextSvg } from "./caption.js";
 import { loadFont } from "./font.js";
 import {
-  CAPTION_TOP,
+  SCREEN_CORNER_RADIUS,
   getBezelBox,
-  getCornerRadius,
   getScreenBox,
+  topRoundedRect,
 } from "./layout.js";
 import { renderShadowSvg } from "./shadow.js";
 
-export interface ComposeFrameInput {
+export interface ComposeFrameInput extends TextSizes {
   /** Raw PNG bytes straight off the device, any resolution. */
   raw: Buffer;
   template: FrameTemplate;
   background: Background;
   textColor: string;
   caption: string;
+  subtitle?: string;
   /** Bundled font name — see src/frame/font.ts. */
   font: string;
 }
@@ -35,35 +36,36 @@ export function assertWithinPlayLimit(buffer: Buffer, id: string): void {
   }
 }
 
-function roundedRectMask(
-  width: number,
-  height: number,
-  radius: number,
-): Buffer {
+function topRoundedMask(width: number, height: number): Buffer {
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-  <rect width="${width}" height="${height}" rx="${radius}" fill="#fff" />
+  ${topRoundedRect({ x: 0, y: 0, width, height }, SCREEN_CORNER_RADIUS, 'fill="#fff"')}
 </svg>`,
   );
 }
 
-/** Crop-to-cover the raw screenshot into `width`×`height`, then clip its corners. */
+/**
+ * Scales the raw screenshot to the screen width and keeps its top, because
+ * the device continues below the canvas. A raw wider than the screen box's
+ * aspect ratio is scaled to the box height and loses its sides instead.
+ */
 async function maskedScreenshot(
   raw: Buffer,
   width: number,
   height: number,
-  radius: number,
 ): Promise<Buffer> {
   const fitted = await sharp(raw)
     .resize(width, height, { fit: "cover", position: "top" })
     .png()
     .toBuffer();
   return sharp(fitted)
-    .composite([
-      { input: roundedRectMask(width, height, radius), blend: "dest-in" },
-    ])
+    .composite([{ input: topRoundedMask(width, height), blend: "dest-in" }])
     .png()
     .toBuffer();
+}
+
+async function svgToPng(svg: string): Promise<Buffer> {
+  return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 /**
@@ -72,47 +74,43 @@ async function maskedScreenshot(
  * test/frame-golden.test.ts for the byte-exact regression suite.
  */
 export async function composeFrame(input: ComposeFrameInput): Promise<Buffer> {
-  const background = await sharp(
-    Buffer.from(renderBackgroundSvg(input.background)),
-  )
-    .png()
-    .toBuffer();
+  const background = await svgToPng(renderBackgroundSvg(input.background));
 
-  const screenBox = getScreenBox(input.template);
-  const cornerRadius = getCornerRadius(input.template);
+  const screenBox = getScreenBox();
   const screenshot = await maskedScreenshot(
     input.raw,
     screenBox.width,
     screenBox.height,
-    cornerRadius,
   );
+  const screenshotLayer: OverlayOptions = {
+    input: screenshot,
+    left: screenBox.x,
+    top: screenBox.y,
+  };
 
   const layers: OverlayOptions[] = [];
-
   if (input.template === "minimal") {
-    const shadowPng = await sharp(Buffer.from(renderShadowSvg(screenBox)))
-      .png()
-      .toBuffer();
-    layers.push({ input: shadowPng, left: 0, top: 0 });
+    const shadow = await svgToPng(renderShadowSvg(screenBox));
+    layers.push({ input: shadow, left: 0, top: 0 }, screenshotLayer);
   } else {
-    const bezelBox = getBezelBox(input.template);
-    const bezelPng = await sharp(
-      Buffer.from(renderBezelSvg(bezelBox, screenBox)),
-    )
-      .png()
-      .toBuffer();
-    layers.push({ input: bezelPng, left: bezelBox.x, top: bezelBox.y });
+    const bezel = await svgToPng(
+      renderBezelSvg(getBezelBox(), screenBox, bezelStyleFor(input.background)),
+    );
+    // The bezel goes above the screenshot, so the bezel's antialiased
+    // opening edge covers the screenshot's own corner edge.
+    layers.push(screenshotLayer, { input: bezel, left: 0, top: 0 });
   }
 
-  layers.push({ input: screenshot, left: screenBox.x, top: screenBox.y });
-
-  if (input.caption) {
-    const font = loadFont(input.font);
-    const captionSvg = renderCaptionSvg(input.caption, input.textColor, font);
-    if (captionSvg) {
-      const captionPng = await sharp(Buffer.from(captionSvg)).png().toBuffer();
-      layers.push({ input: captionPng, left: 0, top: CAPTION_TOP });
-    }
+  const textSvg = renderTextSvg({
+    caption: input.caption,
+    subtitle: input.subtitle ?? "",
+    textColor: input.textColor,
+    font: loadFont(input.font),
+    headlineSize: input.headlineSize,
+    subtitleSize: input.subtitleSize,
+  });
+  if (textSvg) {
+    layers.push({ input: await svgToPng(textSvg), left: 0, top: 0 });
   }
 
   // .flatten() must run in a separate sharp() call after compositing:

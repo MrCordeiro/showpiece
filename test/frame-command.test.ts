@@ -146,6 +146,34 @@ describe("runFrame", () => {
     expect(output).toContain("vitrine capture");
   });
 
+  it("sizes text over every configured screen, including ones --only skips", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { readFileSync } = await import("node:fs");
+    await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));
+    const home = { id: "home", flow: "home.yaml", caption: "Short" };
+    const profile = {
+      id: "profile",
+      flow: "profile.yaml",
+      caption:
+        "A much longer headline that needs a smaller size to fit in two lines",
+    };
+    const loadWith = (screens: Config["screens"]) =>
+      vi.mocked(loadConfig).mockResolvedValue({
+        config: makeConfig({ screenshotsDir, screens }),
+        configPath: resolve(configDir, "vitrine.config.ts"),
+        configDir,
+      });
+
+    const { runFrame } = await import("../src/frame/command.js");
+    const homePath = join(screenshotsDir, "framed", "home.png");
+    loadWith([home]);
+    await runFrame({});
+    const alone = readFileSync(homePath);
+    loadWith([home, profile]);
+    await runFrame({ only: "home" });
+    expect(readFileSync(homePath).equals(alone)).toBe(false);
+  });
+
   it("honors --only, skipping screens not selected", async () => {
     const { loadConfig } = await import("../src/config/load.js");
     await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));

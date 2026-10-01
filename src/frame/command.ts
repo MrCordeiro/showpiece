@@ -5,7 +5,9 @@ import { selectScreens } from "../capture/command.js";
 import { loadConfig } from "../config/load.js";
 import type { Config, ScreenConfig } from "../config/schema.js";
 import { type StepResult, printSummary } from "../util/report.js";
+import { type TextSizes, sharedTextSizes } from "./caption.js";
 import { assertWithinPlayLimit, composeFrame } from "./compositor.js";
+import { loadFont } from "./font.js";
 
 export interface FrameOptions {
   /** Path to the config file (`--config`). */
@@ -28,6 +30,7 @@ async function frameScreen(
   rawDir: string,
   framedDir: string,
   frameConfig: Config["frame"],
+  textSizes: TextSizes,
 ): Promise<StepResult[]> {
   const found = APPEARANCE_SUFFIXES.filter((suffix) =>
     existsSync(join(rawDir, `${screen.id}${suffix}.png`)),
@@ -52,10 +55,12 @@ async function frameScreen(
       const buffer = await composeFrame({
         raw,
         template: frameConfig.template,
-        background: frameConfig.background,
-        textColor: frameConfig.textColor,
+        background: screen.background ?? frameConfig.background,
+        textColor: screen.textColor ?? frameConfig.textColor,
         caption: screen.caption,
+        subtitle: screen.subtitle,
         font: frameConfig.font,
+        ...textSizes,
       });
       assertWithinPlayLimit(buffer, variantId);
       await writeFile(framedPath, buffer);
@@ -85,11 +90,24 @@ export async function runFrame(options: FrameOptions): Promise<number> {
   const framedDir = resolve(config.screenshotsDir, "framed");
   await mkdir(framedDir, { recursive: true });
 
+  // Sized over every configured screen, not only the selected ones, so a
+  // `--only` run produces the same text sizes as a full run.
+  const textSizes = sharedTextSizes(
+    config.screens,
+    loadFont(config.frame.font),
+  );
+
   const results: StepResult[] = [];
   for (const screen of screens) {
     process.stdout.write(`\n▶ Framing "${screen.id}"\n`);
     results.push(
-      ...(await frameScreen(screen, rawDir, framedDir, config.frame)),
+      ...(await frameScreen(
+        screen,
+        rawDir,
+        framedDir,
+        config.frame,
+        textSizes,
+      )),
     );
   }
 

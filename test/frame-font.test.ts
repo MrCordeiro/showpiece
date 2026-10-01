@@ -26,17 +26,25 @@ describe("findAssetPath", () => {
 });
 
 describe("loadFont", () => {
-  it("loads the bundled Inter font with real glyph metrics", () => {
-    const font = loadFont("Inter");
-    expect(font.family).toBe("Inter");
-    expect(font.regular.unitsPerEm).toBeGreaterThan(0);
-    expect(font.bold.unitsPerEm).toBeGreaterThan(0);
-    expect(typeof font.bold.layout).toBe("function");
+  it.each(["Metropolis", "Inter"])(
+    "loads the bundled %s font with real glyph metrics",
+    (name) => {
+      const font = loadFont(name);
+      expect(font.family).toBe(name);
+      expect(font.body.unitsPerEm).toBeGreaterThan(0);
+      expect(font.headline.capHeight).toBeGreaterThan(0);
 
-    const run = font.bold.layout("Ag");
-    expect(run.glyphs.length).toBeGreaterThan(0);
-    expect(run.positions.length).toBe(run.glyphs.length);
-    expect(run.advanceWidth).toBeGreaterThan(0);
+      const run = font.headline.layout("Ag");
+      expect(run.glyphs.length).toBeGreaterThan(0);
+      expect(run.positions.length).toBe(run.glyphs.length);
+      expect(run.advanceWidth).toBeGreaterThan(0);
+    },
+  );
+
+  it("has the ellipsis glyph that truncation appends", () => {
+    const font = loadFont("Metropolis");
+    expect(font.headline.hasGlyphForCodePoint(0x2026)).toBe(true);
+    expect(font.body.hasGlyphForCodePoint(0x2026)).toBe(true);
   });
 
   it("throws a clear error for an unknown font name", () => {

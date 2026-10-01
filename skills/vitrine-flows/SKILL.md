@@ -21,6 +21,10 @@ itself as fixed and work within it.
   `.vitrine/diagnostics/<id>-dark/`. Both appearances coexist.
 - `vitrine.config.ts`, not the filesystem, decides which flows run. A flow
   file does nothing until it's referenced in `screens[]`.
+- `vitrine frame` shows only the top ~70% of each screenshot: the device
+  continues below the canvas edge. End the flow on a state where the
+  important content is in the top two-thirds of the screen. Content behind a
+  bottom navigation bar or at the end of a list is not visible.
 - Re-runs must render identical pixels (fixed demo data, deliberate
   `clearState`, no live timestamps). Different content each run is a flow
   bug even when capture "succeeds."

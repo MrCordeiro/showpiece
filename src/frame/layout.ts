@@ -1,37 +1,23 @@
-import type { FrameTemplate } from "../config/schema.js";
-
 /** Output canvas: Play Store phone screenshot size (9:16 portrait). */
 export const CANVAS_WIDTH = 1080;
 export const CANVAS_HEIGHT = 1920;
 
-/** Horizontal safe margin and vertical band reserved for the caption. */
-export const CAPTION_MARGIN_X = 64;
-export const CAPTION_TOP = 96;
-export const CAPTION_HEIGHT = 240;
-const CAPTION_BOTTOM = CAPTION_TOP + CAPTION_HEIGHT; // 336
+/** Left edge of the headline and subtitle. Text is left-aligned. */
+export const TEXT_MARGIN_X = 96;
+/** Cap-height top of the first headline line. */
+export const HEADLINE_TOP = 130;
 
-/** Every template's device sits on the same bottom baseline. */
-export const DEVICE_BOTTOM_MARGIN = 64;
-const DEVICE_TOP = CAPTION_BOTTOM;
-const DEVICE_AVAILABLE_HEIGHT =
-  CANVAS_HEIGHT - DEVICE_TOP - DEVICE_BOTTOM_MARGIN;
-
-/** Stylized phone silhouette ratio (width:height) for the bezel templates. */
-const BEZEL_DEVICE_ASPECT = 9 / 19.5;
-export const BEZEL_BORDER = 22;
-export const BEZEL_OUTER_RADIUS = 56;
-export const BEZEL_INNER_RADIUS = 34;
-
-/** minimal has no bezel silhouette to respect, so its box uses a wider aspect
- * ratio than the bezel templates instead of a fixed side margin. */
-export const MINIMAL_CORNER_RADIUS = 40;
-
-/** Real device screenshots run roughly 0.45-0.56 (width:height); this is
- * mid-range so "cover"-fit cropping stays modest across that range, while
- * still being visibly wider than the bezel templates' stylized 9/19.5≈0.46
- * silhouette (getScreenBox keeps "minimal wider than the bezel templates"
- * true either way — verify this with the existing layout test). */
-const MINIMAL_ASPECT = 0.52;
+/**
+ * The device top is fixed for every screen, so the phones line up across the
+ * listing set whatever the headline and subtitle length. The text band above
+ * it must fit two headline lines plus two subtitle lines at the largest sizes
+ * in caption.ts.
+ */
+export const DEVICE_TOP = 560;
+const DEVICE_WIDTH = 800;
+export const BEZEL_BORDER = 20;
+export const BEZEL_OUTER_RADIUS = 110;
+export const SCREEN_CORNER_RADIUS = BEZEL_OUTER_RADIUS - BEZEL_BORDER;
 
 export interface Box {
   x: number;
@@ -40,33 +26,42 @@ export interface Box {
   height: number;
 }
 
-/** The rect where the raw screenshot itself is drawn (inside any bezel). */
-export function getScreenBox(template: FrameTemplate): Box {
-  if (template === "minimal") {
-    const width = Math.round(DEVICE_AVAILABLE_HEIGHT * MINIMAL_ASPECT);
-    const x = Math.round((CANVAS_WIDTH - width) / 2);
-    return { x, y: DEVICE_TOP, width, height: DEVICE_AVAILABLE_HEIGHT };
-  }
-  const width = Math.round(DEVICE_AVAILABLE_HEIGHT * BEZEL_DEVICE_ASPECT);
-  const x = Math.round((CANVAS_WIDTH - width) / 2);
-  return { x, y: DEVICE_TOP, width, height: DEVICE_AVAILABLE_HEIGHT };
-}
-
-/** The bezel's outer rect (the screen box expanded by the border). gradient/solid only. */
-export function getBezelBox(template: FrameTemplate): Box {
-  if (template === "minimal") {
-    throw new Error('The "minimal" template has no bezel.');
-  }
-  const screen = getScreenBox(template);
+/**
+ * The visible part of the screen opening, where the raw screenshot is drawn.
+ * It runs to the canvas bottom edge: the device continues below the canvas,
+ * so its bottom corners are never drawn.
+ */
+export function getScreenBox(): Box {
+  const deviceX = (CANVAS_WIDTH - DEVICE_WIDTH) / 2;
+  const y = DEVICE_TOP + BEZEL_BORDER;
   return {
-    x: screen.x - BEZEL_BORDER,
-    y: screen.y - BEZEL_BORDER,
-    width: screen.width + BEZEL_BORDER * 2,
-    height: screen.height + BEZEL_BORDER * 2,
+    x: deviceX + BEZEL_BORDER,
+    y,
+    width: DEVICE_WIDTH - BEZEL_BORDER * 2,
+    height: CANVAS_HEIGHT - y,
   };
 }
 
-/** Corner radius applied to the screenshot's own rounded-rect mask. */
-export function getCornerRadius(template: FrameTemplate): number {
-  return template === "minimal" ? MINIMAL_CORNER_RADIUS : BEZEL_INNER_RADIUS;
+/** The visible part of the device's outer edge (the screen box expanded by the border). */
+export function getBezelBox(): Box {
+  const screen = getScreenBox();
+  return {
+    x: screen.x - BEZEL_BORDER,
+    y: DEVICE_TOP,
+    width: screen.width + BEZEL_BORDER * 2,
+    height: CANVAS_HEIGHT - DEVICE_TOP,
+  };
+}
+
+/**
+ * A rounded rect whose top corners are inside `box` and whose bottom corners
+ * are below it, so an SVG of `box`'s size shows only the top corners. Used for
+ * every shape that continues past the canvas bottom edge.
+ */
+export function topRoundedRect(
+  box: Box,
+  radius: number,
+  attributes: string,
+): string {
+  return `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height + radius * 2}" rx="${radius}" ${attributes} />`;
 }

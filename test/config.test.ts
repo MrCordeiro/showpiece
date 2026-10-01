@@ -23,7 +23,7 @@ describe("configSchema", () => {
     expect(parsed.device.metroPort).toBe(8081);
     expect(parsed.frame.template).toBe("gradient");
     expect(parsed.frame.textColor).toBe("#ffffff");
-    expect(parsed.frame.font).toBe("Inter");
+    expect(parsed.frame.font).toBe("Metropolis");
     expect(parsed.publish.track).toBe("listing");
     expect(parsed.screens[0]?.caption).toBe("");
     expect(parsed.screenshotsDir).toBe(".vitrine/screenshots");
@@ -105,6 +105,46 @@ describe("configSchema", () => {
     expect(
       result.success ? "" : result.error.issues.map((i) => i.message).join(),
     ).toMatch(/template "solid" requires a single background color/);
+  });
+
+  it("accepts a per-screen subtitle, background and text color", () => {
+    const parsed = configSchema.parse({
+      ...base,
+      screens: [
+        {
+          id: "home",
+          flow: "flows/home.yaml",
+          subtitle: "Every account",
+          background: "#3ccf91",
+          textColor: "#1a1a1a",
+        },
+      ],
+    });
+    expect(parsed.screens[0]).toMatchObject({
+      subtitle: "Every account",
+      background: "#3ccf91",
+      textColor: "#1a1a1a",
+    });
+  });
+
+  it('rejects a per-screen gradient background with template "solid"', () => {
+    const result = configSchema.safeParse({
+      ...base,
+      frame: { template: "solid", background: "#101010" },
+      screens: [
+        {
+          id: "home",
+          flow: "flows/home.yaml",
+          background: ["#101010", "#202020"],
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+    expect(result.success ? [] : result.error.issues[0]?.path).toEqual([
+      "screens",
+      0,
+      "background",
+    ]);
   });
 
   it("rejects an unknown font", () => {

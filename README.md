@@ -63,7 +63,7 @@ export default defineConfig({
     template: "gradient",
     background: ["#1a1a2e", "#16213e"],
     textColor: "#ffffff",
-    font: "Inter",
+    font: "Metropolis",          // or "Inter"
   },
   publish: {
     serviceAccountKeyPath: "./secrets/play-service-account.json",
@@ -72,7 +72,14 @@ export default defineConfig({
   appearance: "light",
   screenshotsDir: ".vitrine/screenshots", // optional; this is the default
   screens: [
-    { id: "home", flow: ".vitrine/flows/home.yaml", caption: "Track everything in one place" },
+    {
+      id: "home",
+      flow: ".vitrine/flows/home.yaml",
+      caption: "Track everything in one place",
+      subtitle: "Every account, one screen", // optional
+      background: "#3ccf91",                 // optional; overrides frame.background
+      textColor: "#1a1a1a",                  // optional; overrides frame.textColor
+    },
     { id: "profile", flow: ".vitrine/flows/profile.yaml", caption: "Your data, your way" },
   ],
 });
@@ -178,10 +185,15 @@ What it does:
    is already installed.
 4. For a dev build (`device.devServer: true`), forwards the Metro port with
    `adb reverse` and verifies Metro is running (see below).
-5. Runs each screen's flow in config order, writing `.vitrine/screenshots/raw/<id>.png`
+5. Puts the status bar in Android demo mode: the clock shows 9:30, signal and
+   battery are full, and notification icons are hidden. After the run, it
+   exits demo mode and restores the `sysui_demo_allowed` setting. If the device
+   does not support demo mode, capture shows a warning and continues with the
+   real status bar.
+6. Runs each screen's flow in config order, writing `.vitrine/screenshots/raw/<id>.png`
    and per-screen troubleshooting evidence to `.vitrine/diagnostics/<id>/` (see
    [Troubleshooting](#troubleshooting)).
-6. Prints a summary table plus a run report path, and exits non-zero if any screen failed.
+7. Prints a summary table plus a run report path, and exits non-zero if any screen failed.
 
 Capture works against **any installed build** — never a production build.
 
@@ -246,20 +258,32 @@ What it does:
    run `vitrine capture` first. The failure doesn't stop the rest of the run.
 4. Prints a summary table and exits non-zero if any screen failed.
 
+Every template uses the same layout: a left-aligned headline (the screen's
+`caption`) and an optional `subtitle` at the top, and a large device whose
+top is at the same position on every screen. The device continues below the
+canvas edge, so only the top ~70% of each screenshot is visible. All screens
+use the same headline and subtitle size: `frame` calculates them over every
+screen in the config, also when you use `--only`.
+
 Three templates (`frame.template` in the config):
 
-| Template | Layout |
+| Template | Device |
 | --- | --- |
-| `gradient` | Caption top, device bottom-centered in a plain rounded-rect bezel, two-stop gradient background. |
-| `solid` | Same layout as `gradient`, flat background color instead of a gradient. |
-| `minimal` | No bezel — a larger screenshot with a subtle drop shadow, caption top. |
+| `gradient` | Flat, stylized phone outline on a two-stop gradient background. |
+| `solid` | Same as `gradient`, on a flat background color. |
+| `minimal` | No bezel: the screenshot with rounded top corners and a subtle drop shadow. |
+
+The bezel is near-black. On a near-black background it is dark grey with a
+lighter edge, so the outline stays visible.
 
 The device bezel is generated programmatically, not from a bundled image.
-Caption text is drawn as literal SVG glyph-outline paths, extracted from the
-bundled font (Inter, under `assets/fonts/`, SIL OFL 1.1) with the `fontkit`
-library. No embedded font file and no system fonts are required, so output
-is identical across all machines and CI. Framing is idempotent: re-running
-on unchanged raw screenshots produces byte-identical PNGs.
+Text is drawn as literal SVG glyph-outline paths, extracted from the bundled
+font with the `fontkit` library. The default font is Metropolis (Medium for
+the headline, Regular for the subtitle; Unlicense). Inter (SIL OFL 1.1) is
+also bundled. Both are under `assets/fonts/`. No embedded font file and no
+system fonts are required, so output is identical across all machines and
+CI. Framing is idempotent: re-running on unchanged raw screenshots produces
+byte-identical PNGs.
 
 Layout follows the general App Store screenshot practices in
 [this guide](https://www.lappka.store/blog/app-store-screenshot-best-practices):

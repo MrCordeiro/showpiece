@@ -19,6 +19,8 @@ vi.mock("../src/capture/device.js", () => ({
   assertMetroRunning: vi.fn(async () => undefined),
   getNightMode: vi.fn(async () => "no"),
   setNightMode: vi.fn(async () => undefined),
+  enterDemoMode: vi.fn(async () => "null"),
+  exitDemoMode: vi.fn(async () => undefined),
 }));
 vi.mock("../src/capture/maestro.js", () => ({
   runFlow: vi.fn(async () => "/some/raw/home.png"),
@@ -153,6 +155,53 @@ describe("runCapture", () => {
       "emulator-5554",
       "custom_schedule",
     );
+  });
+
+  it("leaves demo mode with the previous setting even when a flow fails", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { enterDemoMode, exitDemoMode } = await import(
+      "../src/capture/device.js"
+    );
+    const { runFlow } = await import("../src/capture/maestro.js");
+    vi.mocked(enterDemoMode).mockResolvedValueOnce("0");
+    vi.mocked(runFlow).mockRejectedValueOnce(new Error("maestro exploded"));
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig(),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runCapture } = await import("../src/capture/command.js");
+    const exitCode = await runCapture({});
+
+    expect(exitCode).toBe(1);
+    expect(exitDemoMode).toHaveBeenCalledWith("emulator-5554", "0");
+  });
+
+  it("warns and still captures when demo mode is not available", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { enterDemoMode, exitDemoMode } = await import(
+      "../src/capture/device.js"
+    );
+    vi.mocked(enterDemoMode).mockRejectedValueOnce(new Error("no systemui"));
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig(),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+
+    const { runCapture } = await import("../src/capture/command.js");
+    const exitCode = await runCapture({});
+
+    expect(exitCode).toBe(0);
+    expect(exitDemoMode).not.toHaveBeenCalled();
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining("demo mode"),
+    );
+    stderrSpy.mockRestore();
   });
 
   it("restores the previous night mode even when a flow fails", async () => {

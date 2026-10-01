@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  enterDemoMode,
+  exitDemoMode,
   getNightMode,
   isProcessRunning,
   parseAdbDevices,
@@ -7,6 +9,7 @@ import {
   parseProcessList,
   setNightMode,
 } from "../src/capture/device.js";
+import { run } from "../src/util/exec.js";
 
 // getNightMode/setNightMode shell out to adb; mock that boundary. `vi.mock` is
 // hoisted above the imports above, so the static imports get the mock.
@@ -200,5 +203,64 @@ describe("setNightMode", () => {
     await expect(setNightMode("emulator-5554", "yes")).rejects.toThrow(
       /API 29/,
     );
+  });
+});
+
+describe("demo mode", () => {
+  beforeEach(() => {
+    vi.mocked(run).mockClear();
+  });
+
+  const adbArgs = () => vi.mocked(run).mock.calls.map((call) => call[1]);
+
+  it("allows demo mode, enters it, and returns the previous setting", async () => {
+    vi.mocked(run).mockResolvedValueOnce({
+      stdout: "0\n",
+      stderr: "",
+      exitCode: 0,
+    });
+    await expect(enterDemoMode("emulator-5554")).resolves.toBe("0");
+    const calls = adbArgs();
+    expect(calls[1]).toEqual([
+      "-s",
+      "emulator-5554",
+      "shell",
+      "settings",
+      "put",
+      "global",
+      "sysui_demo_allowed",
+      "1",
+    ]);
+    expect(calls[2]).toContain("enter");
+    expect(calls.some((args) => args?.includes("0930"))).toBe(true);
+  });
+
+  it("deletes the setting on exit when it did not exist before", async () => {
+    await exitDemoMode("emulator-5554", "null");
+    const calls = adbArgs();
+    expect(calls[0]).toContain("exit");
+    expect(calls[1]).toEqual([
+      "-s",
+      "emulator-5554",
+      "shell",
+      "settings",
+      "delete",
+      "global",
+      "sysui_demo_allowed",
+    ]);
+  });
+
+  it("restores the previous value on exit", async () => {
+    await exitDemoMode("emulator-5554", "0");
+    expect(adbArgs()[1]).toEqual([
+      "-s",
+      "emulator-5554",
+      "shell",
+      "settings",
+      "put",
+      "global",
+      "sysui_demo_allowed",
+      "0",
+    ]);
   });
 });
