@@ -491,10 +491,13 @@ export async function exitDemoMode(
   serial: string,
   previousAllowed: string,
 ): Promise<void> {
-  await sendDemoCommand(serial, ["exit"]);
   const restore =
     previousAllowed === "null"
       ? ["delete", "global", "sysui_demo_allowed"]
       : ["put", "global", "sysui_demo_allowed", previousAllowed];
-  await run("adb", ["-s", serial, "shell", "settings", ...restore]);
+  try {
+    await sendDemoCommand(serial, ["exit"]);
+  } finally {
+    await run("adb", ["-s", serial, "shell", "settings", ...restore]);
+  }
 }

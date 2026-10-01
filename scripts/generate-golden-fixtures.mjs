@@ -26,12 +26,15 @@ async function buildSampleRaw() {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
+async function cleanDir(dir) {
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+}
+
 async function main() {
   const expectedDir = join(fixturesDir, "expected");
-  // Removes the images of renamed or deleted cases.
-  await rm(expectedDir, { recursive: true, force: true });
+  await cleanDir(expectedDir);
   await mkdir(join(fixturesDir, "raw"), { recursive: true });
-  await mkdir(expectedDir, { recursive: true });
 
   const raw = await buildSampleRaw();
   await writeFile(join(fixturesDir, "raw", "sample.png"), raw);
