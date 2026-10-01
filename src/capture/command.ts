@@ -12,6 +12,8 @@ import {
 import {
   assertMetroRunning,
   ensureApp,
+  enterDemoMode,
+  exitDemoMode,
   getNightMode,
   overrideMetroHost,
   resolveDevice,
@@ -103,6 +105,40 @@ async function restoreNightMode(
   }
 }
 
+function warn(message: string, error: unknown): void {
+  process.stderr.write(
+    `\n⚠ ${message}: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
+}
+
+/**
+ * Best-effort: a device without demo mode still captures, only with its real
+ * status bar, so a failure is a warning and not a failed run.
+ */
+async function tryEnterDemoMode(serial: string): Promise<string | undefined> {
+  try {
+    return await enterDemoMode(serial);
+  } catch (error) {
+    warn(
+      "Could not put the status bar in demo mode, so captures show the real clock, battery and notifications",
+      error,
+    );
+    return undefined;
+  }
+}
+
+async function tryExitDemoMode(
+  serial: string,
+  previousAllowed: string | undefined,
+): Promise<void> {
+  if (previousAllowed === undefined) return;
+  try {
+    await exitDemoMode(serial, previousAllowed);
+  } catch (error) {
+    warn("Could not take the status bar out of demo mode", error);
+  }
+}
+
 /**
  * Run the `capture` command. Returns a process exit code (0 = all captured).
  */
@@ -166,6 +202,7 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
   }
 
   const startedAt = new Date().toISOString();
+  const previousDemoAllowed = await tryEnterDemoMode(serial);
   try {
     for (const screen of screens) {
       process.stdout.write(`\n▶ Capturing "${screen.id}" (${screen.flow})\n`);
@@ -201,6 +238,7 @@ export async function runCapture(options: CaptureOptions): Promise<number> {
       }
     }
   } finally {
+    await tryExitDemoMode(serial, previousDemoAllowed);
     await restoreNightMode(serial, previousNightMode);
   }
 

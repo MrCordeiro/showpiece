@@ -45,6 +45,7 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@fontsource/inter": "^5.3.0",
+    "@fontsource/metropolis": "^5.3.0",
     "@types/node": "^20.19.43",
     "pixelmatch": "^7.2.0",
     "tsdown": "^0.22.9",

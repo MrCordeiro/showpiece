@@ -63,19 +63,38 @@ export interface FontkitGlyphRun {
 export interface FontkitFont {
   familyName: string;
   unitsPerEm: number;
+  capHeight: number;
   layout(text: string): FontkitGlyphRun;
   hasGlyphForCodePoint(codePoint: number): boolean;
 }
 
 export interface FontAsset {
   family: string;
-  regular: FontkitFont;
-  bold: FontkitFont;
+  headline: FontkitFont;
+  body: FontkitFont;
+  /** Extra space after each headline glyph, in em. */
+  headlineTracking: number;
 }
 
-/** v0 ships exactly one font; configSchema's `frame.font` enum (Task 2) keeps this in sync. */
-const FONTS: Record<string, { regular: string; bold: string }> = {
-  Inter: { regular: "Inter-Regular.woff2", bold: "Inter-Bold.woff2" },
+interface FontFiles {
+  headline: string;
+  body: string;
+  headlineTracking: number;
+}
+
+/** configSchema's `frame.font` enum must list exactly these keys. */
+const FONTS: Record<string, FontFiles> = {
+  // Metropolis Medium at -0.05em matches the approved headline design (SPEC.md, "polished frame").
+  Metropolis: {
+    headline: "Metropolis-Medium.woff2",
+    body: "Metropolis-Regular.woff2",
+    headlineTracking: -0.05,
+  },
+  Inter: {
+    headline: "Inter-Bold.woff2",
+    body: "Inter-Regular.woff2",
+    headlineTracking: -0.02,
+  },
 };
 
 function parseFont(path: string): FontkitFont {
@@ -83,17 +102,24 @@ function parseFont(path: string): FontkitFont {
   return fontkit.create(buffer) as unknown as FontkitFont;
 }
 
+const loaded = new Map<string, FontAsset>();
+
 /** Load a bundled font by name for glyph-outline extraction (see caption.ts). */
 export function loadFont(name: string): FontAsset {
+  const cached = loaded.get(name);
+  if (cached) return cached;
   const files = FONTS[name];
   if (!files) {
     throw new Error(
       `Unknown font "${name}". Bundled fonts: ${Object.keys(FONTS).join(", ")}.`,
     );
   }
-  return {
+  const font: FontAsset = {
     family: name,
-    regular: parseFont(findAssetPath(`fonts/${files.regular}`, HERE)),
-    bold: parseFont(findAssetPath(`fonts/${files.bold}`, HERE)),
+    headline: parseFont(findAssetPath(`fonts/${files.headline}`, HERE)),
+    body: parseFont(findAssetPath(`fonts/${files.body}`, HERE)),
+    headlineTracking: files.headlineTracking,
   };
+  loaded.set(name, font);
+  return font;
 }

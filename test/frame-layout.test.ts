@@ -3,70 +3,55 @@ import {
   BEZEL_BORDER,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
-  DEVICE_BOTTOM_MARGIN,
-  MINIMAL_CORNER_RADIUS,
+  DEVICE_TOP,
+  TEXT_MARGIN_X,
   getBezelBox,
-  getCornerRadius,
   getScreenBox,
+  topRoundedRect,
 } from "../src/frame/layout.js";
 
-const TEMPLATES = ["gradient", "solid", "minimal"] as const;
-
 describe("getScreenBox", () => {
-  it("keeps every template's screen box within the canvas", () => {
-    for (const template of TEMPLATES) {
-      const box = getScreenBox(template);
-      expect(box.x).toBeGreaterThanOrEqual(0);
-      expect(box.y).toBeGreaterThanOrEqual(0);
-      expect(box.x + box.width).toBeLessThanOrEqual(CANVAS_WIDTH);
-      expect(box.y + box.height).toBeLessThanOrEqual(CANVAS_HEIGHT);
-    }
+  it("starts one bezel border below the fixed device top", () => {
+    expect(getScreenBox().y).toBe(DEVICE_TOP + BEZEL_BORDER);
   });
 
-  it("bottom-aligns every template's screen box on the same baseline", () => {
-    for (const template of TEMPLATES) {
-      const box = getScreenBox(template);
-      expect(box.y + box.height).toBe(CANVAS_HEIGHT - DEVICE_BOTTOM_MARGIN);
-    }
+  it("runs to the canvas bottom edge, so the device is cut off there", () => {
+    const box = getScreenBox();
+    expect(box.y + box.height).toBe(CANVAS_HEIGHT);
   });
 
-  it("gives minimal a wider screen box than the bezel templates (more product, less chrome)", () => {
-    expect(getScreenBox("minimal").width).toBeGreaterThan(
-      getScreenBox("gradient").width,
-    );
-  });
-
-  it("centers the bezel templates' screen box horizontally", () => {
-    const box = getScreenBox("gradient");
-    expect(box.x + box.width / 2).toBeCloseTo(CANVAS_WIDTH / 2, 0);
-  });
-
-  it("gives gradient and solid the same screen box (they differ only in background)", () => {
-    expect(getScreenBox("gradient")).toEqual(getScreenBox("solid"));
+  it("is centered horizontally", () => {
+    const box = getScreenBox();
+    expect(box.x + box.width / 2).toBe(CANVAS_WIDTH / 2);
   });
 });
 
 describe("getBezelBox", () => {
-  it("expands the screen box by the bezel border on every side", () => {
-    const screen = getScreenBox("gradient");
-    const bezel = getBezelBox("gradient");
+  it("expands the screen box by the border on the sides and top", () => {
+    const screen = getScreenBox();
+    const bezel = getBezelBox();
     expect(bezel.x).toBe(screen.x - BEZEL_BORDER);
     expect(bezel.y).toBe(screen.y - BEZEL_BORDER);
     expect(bezel.width).toBe(screen.width + BEZEL_BORDER * 2);
-    expect(bezel.height).toBe(screen.height + BEZEL_BORDER * 2);
+    expect(bezel.y + bezel.height).toBe(CANVAS_HEIGHT);
   });
 
-  it("throws for the minimal template, which has no bezel", () => {
-    expect(() => getBezelBox("minimal")).toThrow(/no bezel/);
+  it("is wider than the text column but keeps a side padding", () => {
+    const bezel = getBezelBox();
+    expect(bezel.x).toBeGreaterThan(TEXT_MARGIN_X);
+    expect(bezel.width).toBeGreaterThan(CANVAS_WIDTH * 0.7);
   });
 });
 
-describe("getCornerRadius", () => {
-  it("uses the minimal template's own (larger) corner radius", () => {
-    expect(getCornerRadius("minimal")).toBe(MINIMAL_CORNER_RADIUS);
-  });
-
-  it("uses the same radius for gradient and solid", () => {
-    expect(getCornerRadius("gradient")).toBe(getCornerRadius("solid"));
+describe("topRoundedRect", () => {
+  it("extends the rect below the box by two radii so its bottom corners are clipped", () => {
+    const rect = topRoundedRect(
+      { x: 1, y: 2, width: 30, height: 40 },
+      5,
+      'fill="#fff"',
+    );
+    expect(rect).toContain('height="50"');
+    expect(rect).toContain('rx="5"');
+    expect(rect).toContain('fill="#fff"');
   });
 });

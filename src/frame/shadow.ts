@@ -2,7 +2,8 @@ import {
   type Box,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
-  MINIMAL_CORNER_RADIUS,
+  SCREEN_CORNER_RADIUS,
+  topRoundedRect,
 } from "./layout.js";
 
 const SHADOW_BLUR = 16;
@@ -22,15 +23,10 @@ export function renderShadowSvg(screenBox: Box): string {
       <feGaussianBlur stdDeviation="${SHADOW_BLUR}" />
     </filter>
   </defs>
-  <rect
-    x="${screenBox.x}"
-    y="${screenBox.y + SHADOW_OFFSET_Y}"
-    width="${screenBox.width}"
-    height="${screenBox.height}"
-    rx="${MINIMAL_CORNER_RADIUS}"
-    fill="black"
-    fill-opacity="${SHADOW_OPACITY}"
-    filter="url(#blur)"
-  />
+  ${topRoundedRect(
+    { ...screenBox, y: screenBox.y + SHADOW_OFFSET_Y },
+    SCREEN_CORNER_RADIUS,
+    `fill="black" fill-opacity="${SHADOW_OPACITY}" filter="url(#blur)"`,
+  )}
 </svg>`;
 }

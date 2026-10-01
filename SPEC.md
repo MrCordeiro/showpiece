@@ -72,7 +72,7 @@ export default defineConfig({
     template: "gradient",        // "gradient" | "solid" | "minimal"
     background: ["#1a1a2e", "#16213e"], // solid color or gradient stops
     textColor: "#ffffff",
-    font: "Inter",               // bundled font(s); no system font dependence
+    font: "Metropolis",          // "Metropolis" (default) | "Inter"; bundled, no system font dependence
   },
   publish: {
     serviceAccountKeyPath: "./secrets/play-service-account.json",
@@ -86,6 +86,9 @@ export default defineConfig({
       id: "home",
       flow: ".vitrine/flows/home.yaml",   // Maestro flow that ends on the target screen
       caption: "Track everything in one place",
+      subtitle: "Every account, one screen", // optional
+      background: "#3ccf91",                // optional; overrides frame.background
+      textColor: "#1a1a1a",                 // optional; overrides frame.textColor
     },
     {
       id: "profile",
@@ -130,6 +133,7 @@ Convention: each flow's `takeScreenshot` name must match the screen `id`. `captu
 - [x] `raw/` accumulates across runs: a run only writes/removes the paths of the screens it attempted; `--clean` is the only bulk delete.
 - [x] Non-zero exit code and a summary table (captured / failed) at the end.
 - [x] Agents can easily troubleshoot and update failing flows.
+- [x] Puts the device in Android demo mode before capturing (`settings put global sysui_demo_allowed 1`, then `am broadcast -a com.android.systemui.demo`): fixed clock (09:30), full mobile signal and battery, Wi-Fi and notification icons hidden. Exits demo mode afterwards and restores `sysui_demo_allowed`, as `appearance` restores the night mode. A failure to enter demo mode is a warning, not a failed run. Some system images never show a battery icon (for example the `Pixel_6_API_33` emulator), and demo mode cannot add one.
 
 ### P0 — `frame`
 
@@ -141,12 +145,19 @@ Convention: each flow's `takeScreenshot` name must match the screen `id`. `captu
 
 ### P0 — `polished frame`
 
-- [ ] Replace the existing simple device frame with a detailed, premium, matte black aluminum phone frame (e.g., modern premium hardware).
-- [ ] Significantly enlarge the entire device within the viewport, reducing the left and right padding to be minimal (e.g., approx 5% of the total width) so the device nearly fills the canvas horizontally.
-- [ ] Position the device lower so that the bottom part of the physical frame is clipped off the edge of the viewport, giving the sense of the device extending continuously downward.
-- [ ] All the exterior background color to be selected by a hex code or predefined theme.
-- [ ] Allow for an optiona subtitle
-- [ ] Use a strong, simple headline/subheadline treatment, generous whitespace, tighter composition, and more intentional spacing so the screenshot feels like an App Store marketing asset rather than a raw app capture.
+Target: a set of design mockups that the repo owner approved. The pixel values below are measured from those mockups at 1080×1920. The golden images in `test/fixtures/frame/expected/` now show the target.
+
+- [x] **Stylized phone.** Replace the current bezel with a flat, stylized phone: one solid outline (20 px) with large outer corner radii (110 px). No buttons, camera cutout or hardware detail. The bezel is still generated in SVG (`src/frame/bezel.ts`).
+- [x] **Large device.** The device outer edge is at x=140–940 (800 px wide, ~13% side padding). The screenshot is scaled to the screen opening (760 px wide, ~0.7×).
+- [x] **Cropped device.** The device top is fixed at y=560 on every screen. The canvas cuts the device at the bottom edge. The bottom of the bezel and the bottom ~30% of the screenshot are not visible.
+- [x] **Bezel colour follows the background.** On a light or saturated background the bezel is near-black. On a dark background (relative luminance below 0.05) the bezel is dark grey with a lighter stroke, so the outline stays visible.
+- [x] **Background and text colour per screen.** `screens[].background` and `screens[].textColor` override `frame.background` and `frame.textColor` for that screen. With template `solid`, a per-screen background must also be a single colour.
+- [x] **New font.** Metropolis (Unlicense), bundled in `assets/fonts/`: Medium (500) at −0.05 em letter spacing for the headline, Regular (400) for the subtitle. It is the default `frame.font`. `"Inter"` is still available.
+- [x] **Headline.** Left-aligned at x=96, cap top at y=130, at most 2 lines, line height 1.0, up to 106 px. A two-line headline is balanced: the break is at the word boundary that makes the longer line shortest. `frame` calculates one headline size and one subtitle size over every screen in the config (also with `--only`), so all screens use the same sizes.
+- [x] **Optional subtitle.** `screens[].subtitle`: at most 2 lines, regular weight, up to 40 px, left-aligned at x=96, 88 px below the last headline baseline. When a screen has no subtitle, the headline and the device do not move.
+- [x] **`minimal` template.** Uses the same text, screen position and bottom crop, without a bezel and with a soft shadow.
+- [x] Update the golden-image fixtures. Cases: light background, dark background (stroked bezel), gradient background, and `minimal` without a subtitle. The case list is in `test/fixtures/frame/cases.ts`.
+- [x] Document in `skills/vitrine-flows/SKILL.md` that the crop hides the bottom ~30% of the screen, so a flow must show the important content in the top two-thirds.
 
 ### P0 — `publish`
 
@@ -238,6 +249,7 @@ Requirements:
 
 1. **capture** (days 1–3): CLI scaffold, config loader/validation, emulator + adb orchestration, Maestro runner. Exit criteria: raw PNGs for all configured screens from one command.
 2. **frame** (days 4–6): compositor + 3 templates + golden tests. Exit criteria: deterministic framed set at 1080×1920.
+2b. **polished frame**: stylized cropped device, Metropolis text, per-screen colours, status bar demo mode in `capture`. Exit criteria: the repo owner approves a framed set from the real app. Done.
 3. **publish** (days 7–8): `infra/` OpenTofu module + README checklist first, then API client, dry-run, commit path. Exit criteria: `tofu apply` produces a working key, dry-run passes validation against the real listing, one successful real commit.
 
 Ship each milestone as a working increment — do not start `frame` until `capture` works end-to-end on the real app.
@@ -245,5 +257,7 @@ Ship each milestone as a working increment — do not start `frame` until `captu
 ## Open Questions
 
 - ~~**Bezel asset**~~ — resolved in milestone 2: generated programmatically in `sharp`/SVG (`src/frame/bezel.ts`), no bundled image asset.
+- ~~**Headline font**~~: resolved in `polished frame`. Metropolis (Unlicense) matches the headline and subtitle in the design mockups.
+- ~~**Templates after `polished frame`**~~: resolved. `minimal` uses the new text and bottom crop, without a bezel.
 - **Config format** (non-blocking): `.ts` config is the default; decide during implementation whether to also accept `.json` for zero-tooling consumers.
 - **Play Console linking** (owner: repo owner, blocking for milestone 3 only): the OpenTofu module provisions the API + service account + key, but the Play Console invite/permission grant (see Infrastructure section) is manual and must happen before `publish --dry-run` can be tested.

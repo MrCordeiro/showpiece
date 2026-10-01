@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import pixelmatch from "pixelmatch";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import type { FrameTemplate } from "../src/config/schema.js";
 import { composeFrame } from "../src/frame/compositor.js";
+import { GOLDEN_CASES } from "./fixtures/frame/cases.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(here, "fixtures", "frame");
@@ -17,32 +17,16 @@ async function toRaw(buffer: Buffer) {
     .toBuffer({ resolveWithObject: true });
 }
 
-const TEMPLATES: {
-  template: FrameTemplate;
-  background: string | [string, string];
-}[] = [
-  { template: "gradient", background: ["#1a1a2e", "#16213e"] },
-  { template: "solid", background: "#16213e" },
-  { template: "minimal", background: ["#1a1a2e", "#16213e"] },
-];
-
 describe("frame golden images", () => {
-  it.each(TEMPLATES)(
-    "matches the committed fixture for $template",
-    async ({ template, background }) => {
+  it.each(GOLDEN_CASES)(
+    "matches the committed fixture for $name",
+    async ({ name, ...input }) => {
       const raw = await readFile(join(fixturesDir, "raw", "sample.png"));
       const expected = await readFile(
-        join(fixturesDir, "expected", `${template}.png`),
+        join(fixturesDir, "expected", `${name}.png`),
       );
 
-      const actual = await composeFrame({
-        raw,
-        template,
-        background,
-        textColor: "#ffffff",
-        caption: "Track everything in one place",
-        font: "Inter",
-      });
+      const actual = await composeFrame({ raw, ...input });
 
       const [a, b] = await Promise.all([toRaw(actual), toRaw(expected)]);
       expect(a.info.width).toBe(b.info.width);

@@ -2,7 +2,7 @@
 // Regenerates test/fixtures/frame/{raw,expected}. Run this manually after an
 // intentional change to the frame templates, then review the resulting diff
 // before committing — that review IS what makes these images "golden."
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createJiti } from "jiti";
@@ -26,15 +26,12 @@ async function buildSampleRaw() {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-const TEMPLATES = [
-  { template: "gradient", background: ["#1a1a2e", "#16213e"] },
-  { template: "solid", background: "#16213e" },
-  { template: "minimal", background: ["#1a1a2e", "#16213e"] },
-];
-
 async function main() {
+  const expectedDir = join(fixturesDir, "expected");
+  // Removes the images of renamed or deleted cases.
+  await rm(expectedDir, { recursive: true, force: true });
   await mkdir(join(fixturesDir, "raw"), { recursive: true });
-  await mkdir(join(fixturesDir, "expected"), { recursive: true });
+  await mkdir(expectedDir, { recursive: true });
 
   const raw = await buildSampleRaw();
   await writeFile(join(fixturesDir, "raw", "sample.png"), raw);
@@ -43,17 +40,11 @@ async function main() {
   const { composeFrame } = await jiti.import(
     join(root, "src", "frame", "compositor.ts"),
   );
+  const { GOLDEN_CASES } = await jiti.import(join(fixturesDir, "cases.ts"));
 
-  for (const { template, background } of TEMPLATES) {
-    const framed = await composeFrame({
-      raw,
-      template,
-      background,
-      textColor: "#ffffff",
-      caption: "Track everything in one place",
-      font: "Inter",
-    });
-    await writeFile(join(fixturesDir, "expected", `${template}.png`), framed);
+  for (const { name, ...input } of GOLDEN_CASES) {
+    const framed = await composeFrame({ raw, ...input });
+    await writeFile(join(expectedDir, `${name}.png`), framed);
   }
 
   process.stdout.write(`Regenerated golden fixtures in ${fixturesDir}\n`);
