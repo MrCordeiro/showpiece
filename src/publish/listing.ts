@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import sharp, { type Metadata } from "sharp";
 import type { Config, ScreenConfig } from "../config/schema.js";
-import type { TextSizes } from "../frame/caption.js";
+import type { SharedTextSizes } from "../frame/caption.js";
 import { MAX_OUTPUT_BYTES } from "../frame/compositor.js";
 import {
   type Manifest,
@@ -59,7 +59,7 @@ export interface ListingCheckContext {
   config: Config;
   manifest: Manifest;
   /** Must be calculated over every screen in the config, the same as `frame` does. */
-  textSizes: Required<TextSizes>;
+  textSizes: SharedTextSizes;
 }
 
 const BLOCKING: ReadonlySet<ListingStatus> = new Set([

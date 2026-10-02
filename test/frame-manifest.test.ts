@@ -19,6 +19,7 @@ const frame: Config["frame"] = {
   font: "Inter",
 };
 const sizes = { headlineSize: 100, subtitleSize: 40 };
+const sharedSizes = { ...sizes, soloHeadlineSize: 110 };
 const raw = Buffer.from("raw-bytes");
 
 function inputs(overrides: Partial<FrameInputs> = {}): FrameInputs {
@@ -43,21 +44,36 @@ describe("frameInputsFor", () => {
       background: "#3ccf91",
       textColor: "#1a1a1a",
     };
-    expect(frameInputsFor(screen, frame, sizes)).toEqual({
+    expect(frameInputsFor(screen, frame, sharedSizes)).toEqual({
       template: "gradient",
       background: "#3ccf91",
       textColor: "#1a1a1a",
       caption: "Hi",
       subtitle: undefined,
       font: "Inter",
-      headlineSize: 100,
+      headlineSize: 110,
       subtitleSize: 40,
     });
   });
 
+  it.each([
+    ["without a subtitle gets the solo size", undefined, 110],
+    ["with a subtitle gets the shared size", "Sub", 100],
+  ])("gives a screen %s", (_case, subtitle, headlineSize) => {
+    const screen: ScreenConfig = {
+      id: "home",
+      flow: "home.yaml",
+      caption: "Hi",
+      subtitle,
+    };
+    expect(frameInputsFor(screen, frame, sharedSizes).headlineSize).toBe(
+      headlineSize,
+    );
+  });
+
   it("falls back to the frame defaults", () => {
     const screen: ScreenConfig = { id: "home", flow: "home.yaml", caption: "" };
-    const result = frameInputsFor(screen, frame, sizes);
+    const result = frameInputsFor(screen, frame, sharedSizes);
     expect(result.background).toEqual(["#1a1a2e", "#16213e"]);
     expect(result.textColor).toBe("#ffffff");
   });

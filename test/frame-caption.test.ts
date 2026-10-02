@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   HEADLINE_STYLE,
+  SOLO_HEADLINE_STYLE,
   SUBTITLE_STYLE,
   type TextStyle,
   fitText,
@@ -35,11 +36,22 @@ describe("fitText", () => {
     expect(result.lines.length).toBeLessThanOrEqual(2);
   });
 
-  it("balances a two-line wrap instead of leaving an orphan word", () => {
-    // Greedy wrapping at this width gives "aaaa bbbb cccc" / "dddd".
-    const result = fitText("aaaa bbbb cccc dddd", STYLE, 520);
-    expect(result.lines).toEqual(["aaaa bbbb", "cccc dddd"]);
-  });
+  it.each([
+    // Greedy wrapping gives "aaaa bbbb cccc" / "dddd".
+    [2, "aaaa bbbb cccc dddd", ["aaaa bbbb", "cccc dddd"]],
+    // Greedy wrapping gives "aaaa bbbb cccc" / "dddd eeee ffff" / "gggg".
+    [
+      3,
+      "aaaa bbbb cccc dddd eeee ffff gggg",
+      ["aaaa bbbb", "cccc dddd", "eeee ffff gggg"],
+    ],
+  ])(
+    "balances a %i-line wrap instead of leaving an orphan word",
+    (maxLines, text, expected) => {
+      const result = fitText(text, { ...STYLE, maxLines }, 520);
+      expect(result.lines).toEqual(expected);
+    },
+  );
 
   it("shrinks the font size rather than overflowing a narrower box", () => {
     const result = fitText(
@@ -91,20 +103,35 @@ describe("fitText", () => {
 describe("sharedTextSizes", () => {
   const font = loadFont("Metropolis");
 
-  it("uses the size of the caption that needs the smallest one", () => {
-    const short = sharedTextSizes([{ caption: "Short" }], font);
-    const mixed = sharedTextSizes(
-      [
-        { caption: "Short" },
-        {
-          caption:
-            "A much longer headline that needs a smaller size to fit in two lines",
-        },
-      ],
+  const long =
+    "A much longer headline that needs a smaller size to fit in two lines";
+
+  it.each([
+    ["with", "Sub", "headlineSize", HEADLINE_STYLE],
+    ["without", undefined, "soloHeadlineSize", SOLO_HEADLINE_STYLE],
+  ] as const)(
+    "sizes headlines %s a subtitle by the caption that needs the smallest size",
+    (_case, subtitle, key, style) => {
+      const short = sharedTextSizes([{ caption: "Short", subtitle }], font);
+      const mixed = sharedTextSizes(
+        [
+          { caption: "Short", subtitle },
+          { caption: `${long} and then some more words`, subtitle },
+        ],
+        font,
+      );
+      expect(short[key]).toBe(style.sizes[0]);
+      expect(mixed[key]).toBeLessThan(short[key]);
+    },
+  );
+
+  it("sizes headlines with and without a subtitle separately", () => {
+    const sizes = sharedTextSizes(
+      [{ caption: long, subtitle: "Sub" }, { caption: "Short" }],
       font,
     );
-    expect(short.headlineSize).toBe(HEADLINE_STYLE.sizes[0]);
-    expect(mixed.headlineSize).toBeLessThan(short.headlineSize);
+    expect(sizes.headlineSize).toBeLessThan(HEADLINE_STYLE.sizes[0] as number);
+    expect(sizes.soloHeadlineSize).toBe(SOLO_HEADLINE_STYLE.sizes[0]);
   });
 
   it("does not cap a style that no screen uses", () => {
@@ -158,12 +185,16 @@ describe("renderTextSvg", () => {
     expect(svg).toMatch(/<svg[\s\S]*<\/svg>/);
   });
 
-  it("wraps a long caption onto two <path> lines", () => {
+  it.each([
+    ["without a subtitle onto three lines", "", 3],
+    ["with a subtitle onto two lines, plus one subtitle line", "Sub", 3],
+  ])("wraps a long caption %s", (_case, subtitle, paths) => {
     const svg = renderTextSvg({
       ...base,
       caption: "Find every idea fast across all your notes and notebooks",
+      subtitle,
     });
-    expect(svg?.match(/<path/g)?.length).toBe(2);
+    expect(svg?.match(/<path/g)?.length).toBe(paths);
   });
 
   it("throws a clear error naming the font for characters it doesn't support", () => {
