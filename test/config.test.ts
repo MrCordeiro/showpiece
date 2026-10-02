@@ -1,3 +1,5 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -206,5 +208,56 @@ describe("loadConfig", () => {
     await expect(
       loadConfig(join(fixtures, "does-not-exist.ts")),
     ).rejects.toThrow(/Config file not found/);
+  });
+});
+
+describe("publish.listing", () => {
+  it("keeps listing entries exactly as written", () => {
+    const parsed = configSchema.parse({
+      ...base,
+      publish: {
+        ...base.publish,
+        listing: ["home.png", "./marketing/a.png", "..\\shots\\b.png"],
+      },
+    });
+    expect(parsed.publish.listing).toEqual([
+      "home.png",
+      "./marketing/a.png",
+      "..\\shots\\b.png",
+    ]);
+  });
+
+  it("is undefined when omitted", () => {
+    expect(configSchema.parse(base).publish.listing).toBeUndefined();
+  });
+
+  it.each([
+    ["rejects an empty entry", ["home.png", ""], false],
+    [
+      "accepts unknown names and any count, because publish checks them",
+      ["nope.png"],
+      true,
+    ],
+  ])("%s", (_case, listing, success) => {
+    const result = configSchema.safeParse({
+      ...base,
+      publish: { ...base.publish, listing },
+    });
+    expect(result.success).toBe(success);
+  });
+
+  it("is not resolved to absolute paths by loadConfig", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "vitrine-listing-"));
+    const configPath = join(dir, "vitrine.config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ...base,
+        publish: { ...base.publish, listing: ["home.png", "./m/a.png"] },
+      }),
+    );
+    const { config, configDir } = await loadConfig(configPath, tmpdir());
+    expect(config.publish.listing).toEqual(["home.png", "./m/a.png"]);
+    expect(configDir).toBe(dir);
   });
 });

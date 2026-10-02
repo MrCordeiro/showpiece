@@ -198,4 +198,39 @@ describe("runFrame", () => {
       false,
     );
   });
+
+  it("keeps the manifest entries of screens that --only skips", async () => {
+    const { loadConfig } = await import("../src/config/load.js");
+    const { readManifest, writeManifest } = await import(
+      "../src/frame/manifest.js"
+    );
+    await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));
+    const framedDir = join(screenshotsDir, "framed");
+    mkdirSync(framedDir, { recursive: true });
+    await writeManifest(framedDir, {
+      schemaVersion: 1,
+      images: { profile: { inputHash: "in", outputHash: "out" } },
+    });
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({
+        screenshotsDir,
+        screens: [
+          { id: "home", flow: "home.yaml", caption: "" },
+          { id: "profile", flow: "profile.yaml", caption: "" },
+        ],
+      }),
+      configPath: resolve(configDir, "vitrine.config.ts"),
+      configDir,
+    });
+
+    const { runFrame } = await import("../src/frame/command.js");
+    await runFrame({ only: "home" });
+
+    const manifest = await readManifest(framedDir);
+    expect(manifest.images.profile).toEqual({
+      inputHash: "in",
+      outputHash: "out",
+    });
+    expect(manifest.images.home).toBeDefined();
+  });
 });

@@ -76,6 +76,13 @@ export const configSchema = z
         .min(1, "publish.serviceAccountKeyPath is required"),
       /** Images only today; reserved for clarity. */
       track: z.string().default("listing"),
+      /**
+       * `publish` checks the entry names and the 2–8 count, not this schema,
+       * so that a listing mistake never stops `capture` or `frame`.
+       */
+      listing: z
+        .array(z.string().min(1, "publish.listing entries must not be empty"))
+        .optional(),
     }),
     /** Base dir for capture/frame output */
     screenshotsDir: z
@@ -137,10 +144,34 @@ export type ConfigInput = z.input<typeof configSchema>;
 /** Validated, fully-defaulted config the CLI operates on. */
 export type Config = z.output<typeof configSchema>;
 
+type PathSeparator = "/" | "\\";
+
+/** A `publish.listing` entry for an image that vitrine did not make. It is relative to the config file. */
+export type ExternalListingPath =
+  | `.${PathSeparator}${string}`
+  | `..${PathSeparator}${string}`;
+
+/** A framed file name for a screen in `screens`, or an external path. */
+export type ListingEntry<Id extends string = string> =
+  | `${Id}.png`
+  | `${Id}-dark.png`
+  | ExternalListingPath;
+
+type ScreenInput = z.input<typeof screenSchema>;
+
 /**
  * Identity helper that gives editor autocompletion / type-checking to a
  * `vitrine.config.ts`. Validation happens at load time via {@link configSchema}.
+ * `Id` is inferred only from `screens[].id`. `NoInfer` stops a misspelled
+ * `listing` entry from adding a new id, so the editor reports the typo.
  */
-export function defineConfig(config: ConfigInput): ConfigInput {
+export function defineConfig<const Id extends string>(
+  config: Omit<ConfigInput, "screens" | "publish"> & {
+    screens: (ScreenInput & { id: Id })[];
+    publish: ConfigInput["publish"] & {
+      listing?: NoInfer<ListingEntry<Id>>[];
+    };
+  },
+): ConfigInput {
   return config;
 }

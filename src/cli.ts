@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import pkg from "../package.json" with { type: "json" };
 import { runCapture } from "./capture/command.js";
 import { runFrame } from "./frame/command.js";
+import { runPublish } from "./publish/command.js";
 import { runSkillInstall } from "./skill/command.js";
 
 const program = new Command();
@@ -9,7 +11,7 @@ const program = new Command();
 program
   .name("vitrine")
   .description("Play Store screenshot pipeline: capture, frame, publish.")
-  .version("0.1.0");
+  .version(pkg.version);
 
 program
   .command("capture")
@@ -43,6 +45,32 @@ program
   .action(async (opts) => {
     try {
       process.exitCode = await runFrame(opts);
+    } catch (error) {
+      process.stderr.write(
+        `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("publish")
+  .description(
+    "Replace the Play listing's phone screenshots with publish.listing.",
+  )
+  .option("-c, --config <path>", "path to the config file")
+  .option(
+    "--dry-run",
+    "upload and validate, then delete the edit instead of committing",
+  )
+  .option("-y, --yes", "commit without the confirmation question")
+  .action(async (opts) => {
+    try {
+      process.exitCode = await runPublish({
+        config: opts.config,
+        dryRun: opts.dryRun,
+        yes: opts.yes,
+      });
     } catch (error) {
       process.stderr.write(
         `\n✗ ${error instanceof Error ? error.message : String(error)}\n`,
