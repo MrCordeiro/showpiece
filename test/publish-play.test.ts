@@ -1,7 +1,7 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeTempDir } from "./temp-dir.js";
 
 const api = vi.hoisted(() => ({
   edits: {
@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 describe("readServiceAccountKey", () => {
-  const dir = mkdtempSync(join(tmpdir(), "vitrine-key-"));
+  const dir = makeTempDir("vitrine-key-");
 
   it("returns the path and client email of a valid key", async () => {
     const { readServiceAccountKey } = await import("../src/publish/play.js");
@@ -110,7 +110,7 @@ describe("createPlayClient", () => {
     "uploads %s as a phone screenshot with type %s",
     async (file, mimeType) => {
       const { createPlayClient } = await import("../src/publish/play.js");
-      const path = join(mkdtempSync(join(tmpdir(), "vitrine-up-")), file);
+      const path = join(makeTempDir("vitrine-up-"), file);
       writeFileSync(path, "x");
       api.edits.images.upload.mockResolvedValue({ data: {} });
       await createPlayClient(key, pkg).uploadScreenshot(

@@ -1,9 +1,9 @@
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../src/config/schema.js";
+import { makeTempDir } from "./temp-dir.js";
 
 vi.mock("../src/config/load.js", () => ({ loadConfig: vi.fn() }));
 
@@ -56,7 +56,7 @@ describe("runFrame", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    screenshotsDir = mkdtempSync(join(tmpdir(), "vitrine-frame-"));
+    screenshotsDir = makeTempDir("vitrine-frame-");
     mkdirSync(join(screenshotsDir, "raw"), { recursive: true });
   });
 

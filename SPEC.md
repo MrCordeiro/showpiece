@@ -192,7 +192,7 @@ Usage context: a user runs `publish` after Google approves the app release, not 
 - [ ] `capture --serial <device>` to target a specific device/emulator.
 - [ ] Feature graphic (1024×500) generation from the same frame templates.
 - [ ] Progress/spinner output (`ora` or similar).
-- [ ] Tests delete their temp folders. 8 test files create `vitrine-*` folders in the OS temp directory, and most never delete them. Proposed fix: a vitest `globalSetup` (`test/global-setup.ts`) creates one `vitrine-test-run-*` root folder per run and deletes it after the run, also when tests fail. It passes the path to the tests with `provide`/`inject`. A helper `makeTempDir(prefix)` in `test/temp-dir.ts` creates folders in that root and replaces the 18 `mkdtemp`/`mkdtempSync(join(tmpdir(), …))` calls. Check: after a full run, the number of `vitrine-*` folders in the temp directory does not grow. Separately, delete the folders that earlier runs left (list them first).
+- [x] Tests delete their temp folders. A vitest `globalSetup` (`test/global-setup.ts`) creates one `vitrine-test-run-*` root folder per run and deletes it after the run, also when tests fail. It passes the path to the tests with `provide`/`inject`. Tests create temp folders only with `makeTempDir(prefix)` from `test/temp-dir.ts`, which creates them in that root. After a full run, the number of `vitrine-*` folders in the OS temp directory does not grow.
 
 ### P2 (design for, don't build)
 

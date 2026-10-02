@@ -1,10 +1,11 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config/load.js";
 import { configSchema } from "../src/config/schema.js";
+import { makeTempDir } from "./temp-dir.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixtures = join(here, "fixtures");
@@ -247,7 +248,7 @@ describe("publish.listing", () => {
   });
 
   it("is not resolved to absolute paths by loadConfig", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "vitrine-listing-"));
+    const dir = makeTempDir("vitrine-listing-");
     const configPath = join(dir, "vitrine.config.json");
     writeFileSync(
       configPath,

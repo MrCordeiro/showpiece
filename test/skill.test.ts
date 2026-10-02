@@ -1,10 +1,9 @@
-import { mkdtempSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { findPackagedSkill, runSkillInstall } from "../src/skill/command.js";
+import { makeTempDir } from "./temp-dir.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = dirname(here); // test/ -> repo root
@@ -32,7 +31,7 @@ describe("findPackagedSkill", () => {
     // resolves it relative to cwd instead of stopping at a filesystem root.
     // A real, isolated temp directory has a genuine, skill-free ancestor
     // chain on every platform.
-    const isolated = mkdtempSync(join(tmpdir(), "vitrine-no-skill-"));
+    const isolated = makeTempDir("vitrine-no-skill-");
     expect(findPackagedSkill(isolated)).toBeUndefined();
   });
 });
@@ -40,15 +39,8 @@ describe("findPackagedSkill", () => {
 // runSkillInstall is a tiny, self-contained file-copy — real I/O against a
 // throwaway temp dir is simpler and more faithful than mocking node:fs here.
 describe("runSkillInstall", () => {
-  let cwd: string | undefined;
-
-  afterEach(async () => {
-    if (cwd) await rm(cwd, { recursive: true, force: true });
-    cwd = undefined;
-  });
-
   it("copies the skill to .claude/skills/vitrine-flows/SKILL.md", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "vitrine-skill-"));
+    const cwd = makeTempDir("vitrine-skill-");
 
     await runSkillInstall({ cwd });
 
@@ -58,14 +50,14 @@ describe("runSkillInstall", () => {
   });
 
   it("refuses to overwrite an existing install without --force", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "vitrine-skill-"));
+    const cwd = makeTempDir("vitrine-skill-");
     await runSkillInstall({ cwd });
 
     await expect(runSkillInstall({ cwd })).rejects.toThrow(/already exists/);
   });
 
   it("overwrites when --force is passed", async () => {
-    cwd = await mkdtemp(join(tmpdir(), "vitrine-skill-"));
+    const cwd = makeTempDir("vitrine-skill-");
     await runSkillInstall({ cwd });
 
     await expect(runSkillInstall({ cwd, force: true })).resolves.toBe(0);
