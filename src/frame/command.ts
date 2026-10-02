@@ -8,6 +8,14 @@ import { type StepResult, printSummary } from "../util/report.js";
 import { type TextSizes, sharedTextSizes } from "./caption.js";
 import { assertWithinPlayLimit, composeFrame } from "./compositor.js";
 import { loadFont } from "./font.js";
+import {
+  type Manifest,
+  frameInputsFor,
+  inputHash,
+  readManifest,
+  sha256,
+  writeManifest,
+} from "./manifest.js";
 
 export interface FrameOptions {
   /** Path to the config file (`--config`). */
@@ -30,7 +38,8 @@ async function frameScreen(
   rawDir: string,
   framedDir: string,
   frameConfig: Config["frame"],
-  textSizes: TextSizes,
+  textSizes: Required<TextSizes>,
+  manifest: Manifest,
 ): Promise<StepResult[]> {
   const found = APPEARANCE_SUFFIXES.filter((suffix) =>
     existsSync(join(rawDir, `${screen.id}${suffix}.png`)),
@@ -52,18 +61,14 @@ async function frameScreen(
     const framedPath = join(framedDir, `${variantId}.png`);
     try {
       const raw = await readFile(rawPath);
-      const buffer = await composeFrame({
-        raw,
-        template: frameConfig.template,
-        background: screen.background ?? frameConfig.background,
-        textColor: screen.textColor ?? frameConfig.textColor,
-        caption: screen.caption,
-        subtitle: screen.subtitle,
-        font: frameConfig.font,
-        ...textSizes,
-      });
+      const inputs = frameInputsFor(screen, frameConfig, textSizes);
+      const buffer = await composeFrame({ raw, ...inputs });
       assertWithinPlayLimit(buffer, variantId);
       await writeFile(framedPath, buffer);
+      manifest.images[variantId] = {
+        inputHash: inputHash(raw, inputs),
+        outputHash: sha256(buffer),
+      };
       results.push({ id: variantId, status: "framed", path: framedPath });
     } catch (error) {
       results.push({
@@ -89,6 +94,7 @@ export async function runFrame(options: FrameOptions): Promise<number> {
   const rawDir = resolve(config.screenshotsDir, "raw");
   const framedDir = resolve(config.screenshotsDir, "framed");
   await mkdir(framedDir, { recursive: true });
+  const manifest = await readManifest(framedDir);
 
   // Sized over every configured screen, not only the selected ones, so a
   // `--only` run produces the same text sizes as a full run.
@@ -107,9 +113,11 @@ export async function runFrame(options: FrameOptions): Promise<number> {
         framedDir,
         config.frame,
         textSizes,
+        manifest,
       )),
     );
   }
+  await writeManifest(framedDir, manifest);
 
   const failures = printSummary(results, { title: "Frame summary" });
   return failures > 0 ? 1 : 0;
