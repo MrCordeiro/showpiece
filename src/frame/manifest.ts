@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import pkg from "../../package.json" with { type: "json" };
 import type { Config, ScreenConfig } from "../config/schema.js";
-import type { TextSizes } from "./caption.js";
+import type { SharedTextSizes } from "./caption.js";
 import type { ComposeFrameInput } from "./compositor.js";
 
 export const MANIFEST_FILE = "manifest.json";
@@ -28,7 +28,7 @@ export interface Manifest {
 export function frameInputsFor(
   screen: ScreenConfig,
   frame: Config["frame"],
-  textSizes: Required<TextSizes>,
+  textSizes: SharedTextSizes,
 ): FrameInputs {
   return {
     template: frame.template,
@@ -37,7 +37,10 @@ export function frameInputsFor(
     caption: screen.caption,
     subtitle: screen.subtitle,
     font: frame.font,
-    ...textSizes,
+    headlineSize: screen.subtitle
+      ? textSizes.headlineSize
+      : textSizes.soloHeadlineSize,
+    subtitleSize: textSizes.subtitleSize,
   };
 }
 

@@ -20,10 +20,23 @@ export interface TextStyle {
   lineHeight: number;
 }
 
-/** DEVICE_TOP in layout.ts leaves room for both styles at their largest size and line count. */
+/**
+ * The headline of a screen with a subtitle. DEVICE_TOP in layout.ts leaves
+ * room for this style and SUBTITLE_STYLE at their largest size and line count.
+ */
 export const HEADLINE_STYLE: TextStyle = {
   sizes: [106, 96, 88, 80, 72],
   maxLines: 2,
+  lineHeight: 1,
+};
+/**
+ * The headline of a screen without a subtitle, which uses the subtitle's
+ * space. At 118 px, the third baseline is no lower than the lowest subtitle
+ * baseline of HEADLINE_STYLE plus SUBTITLE_STYLE, for both bundled fonts.
+ */
+export const SOLO_HEADLINE_STYLE: TextStyle = {
+  sizes: [118, 106, 96, 88, 80, 72],
+  maxLines: 3,
   lineHeight: 1,
 };
 export const SUBTITLE_STYLE: TextStyle = {
@@ -67,27 +80,47 @@ function wrap(
   return lines;
 }
 
+/** Every way to split `words` into `count` non-empty lines, in order. */
+function* splitIntoLines(words: string[], count: number): Generator<string[]> {
+  if (count === 1) {
+    yield [words.join(" ")];
+    return;
+  }
+  for (let i = 1; i <= words.length - (count - 1); i++) {
+    for (const rest of splitIntoLines(words.slice(i), count - 1)) {
+      yield [words.slice(0, i).join(" "), ...rest];
+    }
+  }
+}
+
 /**
- * Moves the break of a two-line wrap to the word boundary that makes the
- * longer line shortest. A greedy wrap leaves a short orphan on the second
- * line ("All your money, one / glance"); a balanced wrap gives
- * "All your money, / one glance".
+ * Moves the breaks of a multi-line wrap to the word boundaries that make the
+ * longest line shortest, and among those, the shortest line longest. A greedy
+ * wrap leaves a short orphan on the last line ("All your money, one /
+ * glance"); a balanced wrap gives "All your money, / one glance".
  */
-function balanceTwoLines(
+function balanceLines(
   lines: string[],
   fontSize: number,
   measureWidth: MeasureWidth,
 ): string[] {
-  if (lines.length !== 2) return lines;
+  if (lines.length < 2) return lines;
   const words = lines.join(" ").split(" ");
+  const extent = (candidate: string[]) => {
+    const widths = candidate.map((l) => measureWidth(l, fontSize));
+    return { longest: Math.max(...widths), shortest: Math.min(...widths) };
+  };
   let best = lines;
-  let bestWidth = Math.max(...lines.map((l) => measureWidth(l, fontSize)));
-  for (let i = 1; i < words.length; i++) {
-    const candidate = [words.slice(0, i).join(" "), words.slice(i).join(" ")];
-    const width = Math.max(...candidate.map((l) => measureWidth(l, fontSize)));
-    if (width < bestWidth) {
+  let bestExtent = extent(lines);
+  for (const candidate of splitIntoLines(words, lines.length)) {
+    const candidateExtent = extent(candidate);
+    if (
+      candidateExtent.longest < bestExtent.longest ||
+      (candidateExtent.longest === bestExtent.longest &&
+        candidateExtent.shortest > bestExtent.shortest)
+    ) {
       best = candidate;
-      bestWidth = width;
+      bestExtent = candidateExtent;
     }
   }
   return best;
@@ -151,7 +184,7 @@ export function fitText(
     if (wrapped.every((l) => measureWidth(l, fontSize) <= maxWidth)) {
       return {
         fontSize,
-        lines: balanceTwoLines(wrapped, fontSize, measureWidth),
+        lines: balanceLines(wrapped, fontSize, measureWidth),
       };
     }
   }
@@ -258,16 +291,23 @@ export interface TextSizes {
   subtitleSize?: number;
 }
 
+export interface SharedTextSizes extends Required<TextSizes> {
+  /** The headline size for screens without a subtitle (SOLO_HEADLINE_STYLE). */
+  soloHeadlineSize: number;
+}
+
 /**
  * The largest headline and subtitle sizes at which every entry fits. Using
- * one size for the whole listing set keeps the screens consistent when a
- * user swipes through them. Callers must pass every screen in the config,
- * not a `--only` subset, or the sizes change between runs.
+ * one size per group for the whole listing set keeps the screens consistent
+ * when a user swipes through them. Headlines with and without a subtitle are
+ * two groups, because a headline without one may use the subtitle's space.
+ * Callers must pass every screen in the config, not a `--only` subset, or the
+ * sizes change between runs.
  */
 export function sharedTextSizes(
   texts: { caption: string; subtitle?: string }[],
   font: FontAsset,
-): Required<TextSizes> {
+): SharedTextSizes {
   const headline = measurerFor(headlineFace(font));
   const subtitle = measurerFor(subtitleFace(font));
   const fit = (
@@ -280,12 +320,14 @@ export function sharedTextSizes(
         (value) => fitText(value, style, TEXT_MAX_WIDTH, measure).fontSize,
       ),
     );
+  const captions = (withSubtitle: boolean) =>
+    texts
+      .filter((t) => Boolean(t.subtitle) === withSubtitle)
+      .map((t) => t.caption)
+      .filter(Boolean);
   return {
-    headlineSize: fit(
-      texts.map((t) => t.caption).filter(Boolean),
-      HEADLINE_STYLE,
-      headline,
-    ),
+    headlineSize: fit(captions(true), HEADLINE_STYLE, headline),
+    soloHeadlineSize: fit(captions(false), SOLO_HEADLINE_STYLE, headline),
     subtitleSize: fit(
       texts.map((t) => t.subtitle ?? "").filter(Boolean),
       SUBTITLE_STYLE,
@@ -338,9 +380,10 @@ export function renderTextSvg(input: TextInput): string | undefined {
   const fill = escapeAttr(input.textColor);
   const paths: string[] = [];
 
+  const headlineStyle = input.subtitle ? HEADLINE_STYLE : SOLO_HEADLINE_STYLE;
   const headlineLayout = fitText(
     input.caption,
-    HEADLINE_STYLE,
+    headlineStyle,
     TEXT_MAX_WIDTH,
     measurerFor(headline),
     input.headlineSize,
@@ -349,13 +392,13 @@ export function renderTextSvg(input: TextInput): string | undefined {
   if (headlineLayout.lines.length > 0) {
     const first = HEADLINE_TOP + capHeightPx(headline, headlineLayout.fontSize);
     paths.push(
-      ...renderLines(headline, headlineLayout, HEADLINE_STYLE, first, fill),
+      ...renderLines(headline, headlineLayout, headlineStyle, first, fill),
     );
     const last =
       first +
       (headlineLayout.lines.length - 1) *
         headlineLayout.fontSize *
-        HEADLINE_STYLE.lineHeight;
+        headlineStyle.lineHeight;
     subtitleBaseline = last + SUBTITLE_GAP;
   }
 

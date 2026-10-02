@@ -5,7 +5,7 @@ import { selectScreens } from "../capture/command.js";
 import { loadConfig } from "../config/load.js";
 import type { Config, ScreenConfig } from "../config/schema.js";
 import { type StepResult, printSummary } from "../util/report.js";
-import { type TextSizes, sharedTextSizes } from "./caption.js";
+import { type SharedTextSizes, sharedTextSizes } from "./caption.js";
 import { assertWithinPlayLimit, composeFrame } from "./compositor.js";
 import { loadFont } from "./font.js";
 import {
@@ -38,7 +38,7 @@ async function frameScreen(
   rawDir: string,
   framedDir: string,
   frameConfig: Config["frame"],
-  textSizes: Required<TextSizes>,
+  textSizes: SharedTextSizes,
   manifest: Manifest,
 ): Promise<StepResult[]> {
   const found = APPEARANCE_SUFFIXES.filter((suffix) =>
