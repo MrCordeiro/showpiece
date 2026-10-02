@@ -56,7 +56,7 @@ pure function  →  function with temp files  →  command with mocks  →  shar
 Aim for many tests at the left, few at the right.
 
 - **Pure function.** Schema parsing (`configSchema`), hashes (`inputHash`), checks that take a `Buffer` (`playImageProblem`), error mapping (`toPublishError`), name matching (`suggestName`). Pass values in, assert the return value. Create image buffers in memory with `sharp({ create: … })`; do not write them to disk unless the code under test reads files.
-- **Function with temp files.** For code whose job is file I/O (`readManifest`, `checkListing`, `loadConfig`). Use a temp directory, never the repo.
+- **Function with temp files.** For code whose job is file I/O (`readManifest`, `checkListing`, `loadConfig`). Create folders with `makeTempDir(prefix)` from `test/temp-dir.ts`, never in the repo and never with `mkdtemp` in the OS temp directory. `test/global-setup.ts` deletes every `makeTempDir` folder after the run.
 - **Command with mocks.** `runCapture`, `runFrame`, `runPublish`. Mock `../src/config/load.js` to supply the config, mock `../src/util/exec.js` (or the capture modules) for `adb` and `maestro`, and inject a fake `PlayClient` through `PublishDeps`. Use this level for orchestration: order of external calls, exit codes, cleanup after failure.
 - **Sharp render.** `runFrame` and `composeFrame` load sharp and fonts and take hundreds of milliseconds. When many tests need framed images, frame once in `beforeAll` and copy the folder into each test. Golden-image comparisons belong only in `test/frame-golden.test.ts` (cases in `test/fixtures/frame/cases.ts`; regenerate with `npm run golden:update`).
 - When something is hard to test cheaply, that is a design signal. Extract the logic into a pure function and test that.
@@ -77,7 +77,7 @@ Aim for many tests at the left, few at the right.
 - No `setTimeout`, `sleep`, or arbitrary waits. Use fake timers or wait on a real condition.
 - No real network, device, emulator or external service. Mock the boundary.
 - Tests pass in any order and in isolation. Do not rely on state that a previous test left behind.
-- Delete what a test creates. Restore spies (`vi.restoreAllMocks()` or `mockRestore()`) that replace `process.stdout.write` or other globals.
+- Leave nothing behind: temp folders come from `makeTempDir`, and the run deletes them. Restore spies (`vi.restoreAllMocks()` or `mockRestore()`) that replace `process.stdout.write` or other globals.
 - No `it.only` or `describe.only` in a commit. It skips every other test in the file.
 - No `.skip` without a one-line reason and a linked issue. A permanently skipped test is dead weight; delete it or fix it.
 

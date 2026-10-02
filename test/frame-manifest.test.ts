@@ -1,5 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Config, ScreenConfig } from "../src/config/schema.js";
@@ -11,6 +10,7 @@ import {
   readManifest,
   writeManifest,
 } from "../src/frame/manifest.js";
+import { makeTempDir } from "./temp-dir.js";
 
 const frame: Config["frame"] = {
   template: "gradient",
@@ -97,13 +97,13 @@ describe("readManifest", () => {
     ["the schema version is unknown", '{"schemaVersion":2,"images":{}}'],
     ["images is an array", '{"schemaVersion":1,"images":[]}'],
   ])("returns an empty manifest when %s", async (_case, content) => {
-    const dir = mkdtempSync(join(tmpdir(), "vitrine-manifest-"));
+    const dir = makeTempDir("vitrine-manifest-");
     if (content !== undefined) writeFileSync(join(dir, MANIFEST_FILE), content);
     expect(await readManifest(dir)).toEqual(empty);
   });
 
   it("reads back what writeManifest wrote", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "vitrine-manifest-"));
+    const dir = makeTempDir("vitrine-manifest-");
     const manifest = {
       schemaVersion: 1 as const,
       images: { home: { inputHash: "a", outputHash: "b" } },

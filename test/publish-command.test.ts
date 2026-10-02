@@ -1,5 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import sharp from "sharp";
 import {
@@ -14,6 +13,7 @@ import {
 import type { Config } from "../src/config/schema.js";
 import type { PlayClient } from "../src/publish/play.js";
 import { VitrineError } from "../src/util/errors.js";
+import { makeTempDir } from "./temp-dir.js";
 
 vi.mock("../src/config/load.js", () => ({ loadConfig: vi.fn() }));
 
@@ -113,7 +113,7 @@ function fakeClient(overrides: Partial<PlayClient> = {}) {
 // Framing loads sharp and fonts, so it runs once. Each test gets a copy, and
 // the copied manifest stays valid because it records hashes, not paths.
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "vitrine-publish-template-"));
+  root = makeTempDir("vitrine-publish-template-");
   const config = makeConfig();
   const raw = await sharp({
     create: { width: 400, height: 800, channels: 3, background: "#3b82f6" },
@@ -135,7 +135,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  root = mkdtempSync(join(tmpdir(), "vitrine-publish-"));
+  root = makeTempDir("vitrine-publish-");
   cpSync(framedTemplate, join(root, ".vitrine/screenshots"), {
     recursive: true,
   });

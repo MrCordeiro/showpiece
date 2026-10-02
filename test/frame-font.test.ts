@@ -1,12 +1,12 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { findAssetPath, loadFont } from "../src/frame/font.js";
+import { makeTempDir } from "./temp-dir.js";
 
 describe("findAssetPath", () => {
   it("walks up from a nested directory to find assets/<path>", () => {
-    const root = mkdtempSync(join(tmpdir(), "vitrine-asset-"));
+    const root = makeTempDir("vitrine-asset-");
     const nested = join(root, "a", "b", "c");
     mkdirSync(nested, { recursive: true });
     mkdirSync(join(root, "assets", "fonts"), { recursive: true });
@@ -18,7 +18,7 @@ describe("findAssetPath", () => {
   });
 
   it("throws when the asset isn't found within maxLevels", () => {
-    const root = mkdtempSync(join(tmpdir(), "vitrine-asset-"));
+    const root = makeTempDir("vitrine-asset-");
     expect(() => findAssetPath("fonts/nope.txt", root, 1)).toThrow(
       /Could not locate bundled asset/,
     );

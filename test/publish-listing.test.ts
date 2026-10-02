@@ -1,5 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +15,7 @@ import {
   resolveListing,
   suggestName,
 } from "../src/publish/listing.js";
+import { makeTempDir } from "./temp-dir.js";
 
 vi.mock("../src/config/load.js", () => ({ loadConfig: vi.fn() }));
 
@@ -87,7 +87,7 @@ async function frameAll(config: Config): Promise<void> {
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  root = mkdtempSync(join(tmpdir(), "vitrine-listing-"));
+  root = makeTempDir("vitrine-listing-");
   screenshotsDir = join(root, ".vitrine/screenshots");
   mkdirSync(join(screenshotsDir, "raw"), { recursive: true });
   mkdirSync(join(screenshotsDir, "framed"), { recursive: true });
