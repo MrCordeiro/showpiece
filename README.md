@@ -262,9 +262,14 @@ What it does:
 Every template uses the same layout: a left-aligned headline (the screen's
 `caption`) and an optional `subtitle` at the top, and a large device whose
 top is at the same position on every screen. The device continues below the
-canvas edge, so only the top ~70% of each screenshot is visible. All screens
-use the same headline and subtitle size: `frame` calculates them over every
-screen in the config, also when you use `--only`.
+canvas edge, so only the top ~70% of each screenshot is visible.
+
+A headline next to a subtitle has at most 2 lines. A headline without a
+subtitle uses the subtitle's space: it can have 3 lines and a larger size.
+`frame` calculates one headline size for the screens with a subtitle, one for
+the screens without, and one subtitle size. It calculates them over every
+screen in the config, also when you use `--only`, so each group looks the
+same on every screen.
 
 Three templates (`frame.template` in the config):
 
@@ -370,6 +375,16 @@ publish: {
 - A name without a path refers to a file created by `frame`: `<id>.png` or `<id>-dark.png`. The editor reports typos before you run anything.
 - A path starting with `./` or `../` refers to an image that vitrine did not create, such as a framed image edited in Photoshop. vitrine resolves the path relative to `vitrine.config.ts` and uploads the image to Play unchanged.
 - If `listing` is omitted, `publish` uses every screen in the order they appear in the `appearance` config.
+
+`publish` edits the listing of `app.packageName`. If you capture a dev build with its own package name (for example `com.example.myapp.dev`), set `publish.packageName` to the package name of the app on Google Play:
+
+```ts
+app: { packageName: "com.example.myapp.dev" },  // the build that capture opens
+publish: {
+  serviceAccountKeyPath: "./.envs/play-service-account.json",
+  packageName: "com.example.myapp",            // the app whose listing publish edits
+},
+```
 
 ### What it does
 
