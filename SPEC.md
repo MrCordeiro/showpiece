@@ -77,6 +77,7 @@ export default defineConfig({
   publish: {
     serviceAccountKeyPath: "./.envs/play-service-account.json",
     track: "listing",            // images only; field reserved for clarity
+    packageName: "com.example.myapp", // optional; the Play app to edit when it differs from app.packageName
     listing: [                   // optional; the ordered phone screenshots that publish uploads (2–8)
       "home.png",                // a file in <screenshotsDir>/framed/
       "profile-dark.png",
@@ -165,8 +166,8 @@ Target: a set of design mockups that the repo owner approved. The pixel values b
 - [x] **Bezel colour follows the background.** On a light or saturated background the bezel is near-black. On a dark background (relative luminance below 0.05) the bezel is dark grey with a lighter stroke, so the outline stays visible.
 - [x] **Background and text colour per screen.** `screens[].background` and `screens[].textColor` override `frame.background` and `frame.textColor` for that screen. With template `solid`, a per-screen background must also be a single colour.
 - [x] **New font.** Metropolis (Unlicense), bundled in `assets/fonts/`: Medium (500) at −0.05 em letter spacing for the headline, Regular (400) for the subtitle. It is the default `frame.font`. `"Inter"` is still available.
-- [x] **Headline.** Left-aligned at x=96, cap top at y=130, at most 2 lines, line height 1.0, up to 106 px. A two-line headline is balanced: the break is at the word boundary that makes the longer line shortest. `frame` calculates one headline size and one subtitle size over every screen in the config (also with `--only`), so all screens use the same sizes.
-- [x] **Optional subtitle.** `screens[].subtitle`: at most 2 lines, regular weight, up to 40 px, left-aligned at x=96, 88 px below the last headline baseline. When a screen has no subtitle, the headline and the device do not move.
+- [x] **Headline.** Left-aligned at x=96, cap top at y=130, line height 1.0. With a subtitle: at most 2 lines, up to 106 px. Without a subtitle, the headline uses the subtitle's space: at most 3 lines, up to 118 px (the largest size whose third baseline is no lower than the lowest subtitle baseline). A multi-line headline is balanced: the breaks are at the word boundaries that make the longest line shortest, and among those, the shortest line longest. `frame` calculates the sizes over every screen in the config (also with `--only`): one headline size for screens with a subtitle, one for screens without, and one subtitle size. Each group uses the same size on every screen.
+- [x] **Optional subtitle.** `screens[].subtitle`: at most 2 lines, regular weight, up to 40 px, left-aligned at x=96, 88 px below the last headline baseline. The device top does not move, with or without a subtitle.
 - [x] **`minimal` template.** Uses the same text, screen position and bottom crop, without a bezel and with a soft shadow.
 - [x] Update the golden-image fixtures. Cases: light background, dark background (stroked bezel), gradient background, and `minimal` without a subtitle. The case list is in `test/fixtures/frame/cases.ts`.
 - [x] Document in `skills/vitrine-flows/SKILL.md` that the crop hides the bottom ~30% of the screen, so a flow must show the important content in the top two-thirds.
@@ -175,14 +176,15 @@ Target: a set of design mockups that the repo owner approved. The pixel values b
 
 Usage context: a user runs `publish` after Google approves the app release, not at release time. The user captures, frames and edits the images during the review wait. So `publish` uploads the files that exist now. It never captures or frames again.
 
-- [ ] Auths with a service account key; clear error if key invalid or lacks permissions.
-- [ ] `frame` writes `<screenshotsDir>/framed/manifest.json`. For each framed image, the manifest records an input hash and an output hash. The input hash covers the raw file bytes, caption, subtitle, background, text colour, template, font, the shared text sizes, and the vitrine version. The output hash is the hash of the framed PNG. A run updates only the entries of the images it framed, the same as the `raw/` contract, so `--only` runs keep the other entries.
-- [ ] A framed entry is `stale` when it has no manifest entry, when its input hash differs from the hash of the current raw file and config, or when the framed file differs from the output hash (it was edited by hand). `stale` is a warning, not an error: the story table shows it, and the user decides. External `./` entries are never `stale`.
-- [ ] Resolves `publish.listing` (or the default when it is absent, see "Config Schema") to an ordered list of files before it calls the API.
-- [ ] Prints a numbered story table before any API call: position, file, caption (framed entries only), and status: `ok`, `missing`, `stale`, `too large`, or `invalid` (not PNG or JPEG, has an alpha channel, or wrong dimensions). An unknown framed name gets a "did you mean `<name>`?" hint. Any `missing`, `too large` or `invalid` entry, or a count outside 2–8, stops the run before the API is called.
+- [x] Auths with a service account key; clear error if key invalid or lacks permissions.
+- [x] `frame` writes `<screenshotsDir>/framed/manifest.json`. For each framed image, the manifest records an input hash and an output hash. The input hash covers the raw file bytes, caption, subtitle, background, text colour, template, font, the shared text sizes, and the vitrine version. The output hash is the hash of the framed PNG. A run updates only the entries of the images it framed, the same as the `raw/` contract, so `--only` runs keep the other entries.
+- [x] A framed entry is `stale` when it has no manifest entry, when its input hash differs from the hash of the current raw file and config, or when the framed file differs from the output hash (it was edited by hand). `stale` is a warning, not an error: the story table shows it, and the user decides. External `./` entries are never `stale`.
+- [x] Resolves `publish.listing` (or the default when it is absent, see "Config Schema") to an ordered list of files before it calls the API.
+- [x] Edits the listing of `publish.packageName` when it is set, else of `app.packageName`. `capture` often opens a dev build with its own package name, and the Play listing belongs to the production package name.
+- [x] Prints a numbered story table before any API call: position, file, caption (framed entries only), and status: `ok`, `missing`, `stale`, `too large`, or `invalid` (not PNG or JPEG, has an alpha channel, or wrong dimensions). An unknown framed name gets a "did you mean `<name>`?" hint. Any `missing`, `too large` or `invalid` entry, or a count outside 2–8, stops the run before the API is called.
 - [ ] Uses the androidpublisher v3 **edits** flow: `edits.insert` → `edits.images.deleteall` (phoneScreenshots, configured locale) → upload the listing files in listing order → `edits.validate` → `edits.commit`.
 - [ ] `edits.commit` always uses `changesInReviewBehavior: ERROR_IF_IN_REVIEW`. The default (`CANCEL_IN_REVIEW_AND_SUBMIT`) can cancel changes that are in review, such as a pending app release. When Play returns the in-review error, `publish` explains that changes are in review and that the user must run `publish` again after Google approves them. This is fixed behaviour, not an option.
-- [ ] `--dry-run`: performs everything through `edits.validate`, then **deletes the edit instead of committing**. It prints the same story table.
+- [x] `--dry-run`: performs everything through `edits.validate`, then **deletes the edit instead of committing**. It prints the same story table.
 - [ ] A real run asks `Commit <n> screenshots to <packageName>? [y/N]` after the story table. `--yes` skips the question. A run without a terminal (no TTY) and without `--yes` fails with a message that names `--yes`.
 - [ ] Prints a link to the Play Console listing page on success.
 
@@ -259,7 +261,7 @@ output "service_account_email" {
 Requirements:
 
 - [ ] The README has a "Publish setup" section with the example above, a note that the app project must gitignore the key file and must not commit or share the state file (the state contains the private key), and the manual checklist below.
-- [ ] No GCP IAM role bindings. This is intentional. Play listing permissions are **not** GCP IAM; they are granted inside Play Console.
+- [x] No GCP IAM role bindings. This is intentional. Play listing permissions are **not** GCP IAM; they are granted inside Play Console.
 
 **Manual steps that cannot be automated** (no Terraform/API surface exists for Play Console account linking — document these in the README as a checklist):
 
@@ -272,7 +274,7 @@ Requirements:
 1. **capture** (days 1–3): CLI scaffold, config loader/validation, emulator + adb orchestration, Maestro runner. Exit criteria: raw PNGs for all configured screens from one command.
 2. **frame** (days 4–6): compositor + 3 templates + golden tests. Exit criteria: deterministic framed set at 1080×1920.
 2b. **polished frame**: stylized cropped device, Metropolis text, per-screen colours, status bar demo mode in `capture`. Exit criteria: the repo owner approves a framed set from the real app. Done.
-3. **publish** (days 7–8): API client, dry-run, commit path, and the README setup section. The app project creates the service account key with the README example. Exit criteria: dry-run passes validation against the real listing, one successful real commit, and one real commit attempt while changes are in review returns the in-review error (it does not cancel the review).
+3. **publish** (days 7–8): API client, dry-run, commit path, and the README setup section. The app project creates the service account key with the README example. Exit criteria: dry-run passes validation against the real listing, one successful real commit, and one real commit attempt while changes are in review returns the in-review error (it does not cancel the review). Status (2026-10-02): `tofu apply` created the key in the app project, and `publish --dry-run` passed validation against the real cashzilla listing (`com.pluckd.cashzilla`). The real commit and the commit attempt while changes are in review are still open.
 
 Ship each milestone as a working increment — do not start `frame` until `capture` works end-to-end on the real app.
 
@@ -284,4 +286,4 @@ Ship each milestone as a working increment — do not start `frame` until `captu
 - **Config format** (non-blocking): `.ts` config is the default; decide during implementation whether to also accept `.json` for zero-tooling consumers.
 - ~~**Stale framed images**~~: resolved. `frame` writes `framed/manifest.json` with input and output hashes, and `publish` compares it to the current raw files and config. Modification times were rejected because they miss a caption change in the config.
 - **In-review behaviour** (verify during milestone 3): the API reference does not say exactly which changes `CANCEL_IN_REVIEW_AND_SUBMIT` cancels, or the error text that `ERROR_IF_IN_REVIEW` returns. Verify both against the real app before the error message is final.
-- **Play Console linking** (owner: repo owner, blocking for milestone 3 only): the app project creates the service account and key, but the Play Console invite/permission grant (see Infrastructure section) is manual and must happen before `publish --dry-run` can be tested.
+- ~~**Play Console linking**~~: resolved. The service account `vitrine-publisher@cashzilla-app.iam.gserviceaccount.com` has "Manage store presence" for the cashzilla app, and `publish --dry-run` passes.
