@@ -77,6 +77,15 @@ export const configSchema = z
       /** Images only today; reserved for clarity. */
       track: z.string().default("listing"),
       /**
+       * The Play app whose listing `publish` edits, when it differs from
+       * `app.packageName`. `capture` must open the build installed on the
+       * device, which is often a dev variant with its own package name.
+       */
+      packageName: z
+        .string()
+        .min(1, "publish.packageName must not be empty")
+        .optional(),
+      /**
        * `publish` checks the entry names and the 2–8 count, not this schema,
        * so that a listing mistake never stops `capture` or `frame`.
        */

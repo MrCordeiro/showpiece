@@ -220,23 +220,35 @@ describe("runPublish", () => {
     expect(output).toContain("Nothing was sent to Play");
   });
 
-  it("asks with the count and the package name, then commits on yes", async () => {
-    await useConfig(makeConfig());
-    writeKey();
-    const fake = fakeClient();
-    const confirm = vi.fn(async () => true);
-    const { runPublish } = await import("../src/publish/command.js");
+  it.each([
+    ["app.packageName", undefined, "com.example.app"],
+    ["publish.packageName", "com.example.app.prod", "com.example.app.prod"],
+  ])(
+    "asks with the count and %s, then commits that app on yes",
+    async (_source, publishPackageName, expected) => {
+      const config = makeConfig();
+      config.publish.packageName = publishPackageName;
+      await useConfig(config);
+      writeKey();
+      const fake = fakeClient();
+      const confirm = vi.fn(async () => true);
+      const { runPublish } = await import("../src/publish/command.js");
 
-    await runPublish(
-      {},
-      { createClient: fake.createClient, confirm, isInteractive: true },
-    );
+      await runPublish(
+        {},
+        { createClient: fake.createClient, confirm, isInteractive: true },
+      );
 
-    expect(confirm).toHaveBeenCalledWith(
-      expect.stringContaining("Commit 2 screenshots to com.example.app?"),
-    );
-    expect(fake.calls.at(-1)).toBe("commit");
-  });
+      expect(confirm).toHaveBeenCalledWith(
+        expect.stringContaining(`Commit 2 screenshots to ${expected}?`),
+      );
+      expect(fake.createClient).toHaveBeenCalledWith(
+        expect.anything(),
+        expected,
+      );
+      expect(fake.calls.at(-1)).toBe("commit");
+    },
+  );
 
   it("fails without a TTY and without --yes", async () => {
     await useConfig(makeConfig());
