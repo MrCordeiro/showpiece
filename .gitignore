@@ -7,7 +7,7 @@ coverage/
 .vitrine/diagnostics/
 
 # Play publishing credentials (never commit)
-secrets/
+.envs/
 
 # npm pack tarballs
 *.tgz

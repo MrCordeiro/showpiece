@@ -23,11 +23,11 @@ Updating the Google Play listing for our React Native (Expo) Android app is manu
 
 ## Architecture Overview
 
-TypeScript CLI package, Node 20+, developed in its **own standalone repo** (not inside the app repo — Metro's upward `node_modules` resolution and file watching conflict with nested packages, and a separate repo matches the goal of publishing to npm). The app repo is the first consumer: it holds only `vitrine.config.ts`, `.vitrine/` (flows and generated screenshots), the gitignored `secrets/`, and its instantiation of the infra module, and installs the tool as a dev dependency (via `npm pack` tarball until published). `.vitrine/` namespaces everything vitrine owns under one dedicated root so it can't collide with folder names a client app already uses.
+TypeScript CLI package, Node 20+, developed in its **own standalone repo** (not inside the app repo — Metro's upward `node_modules` resolution and file watching conflict with nested packages, and a separate repo matches the goal of publishing to npm). The app repo is the first consumer: it holds only `vitrine.config.ts`, `.vitrine/` (flows and generated screenshots), the gitignored service account key, and installs the tool as a dev dependency (via `npm pack` tarball until published). `.vitrine/` namespaces everything vitrine owns under one dedicated root so it can't collide with folder names a client app already uses.
 
 Three independent commands sharing one config file:
 
-```
+```text
 vitrine.config.ts ──► capture ──► .vitrine/screenshots/raw/*.png
                           frame   ──► .vitrine/screenshots/framed/*.png
                           publish ──► Google Play listing
@@ -75,8 +75,13 @@ export default defineConfig({
     font: "Metropolis",          // "Metropolis" (default) | "Inter"; bundled, no system font dependence
   },
   publish: {
-    serviceAccountKeyPath: "./secrets/play-service-account.json",
+    serviceAccountKeyPath: "./.envs/play-service-account.json",
     track: "listing",            // images only; field reserved for clarity
+    listing: [                   // optional; the ordered phone screenshots that publish uploads (2–8)
+      "home.png",                // a file in <screenshotsDir>/framed/
+      "profile-dark.png",
+      "./marketing/budget-highlighted.png", // an image vitrine did not make; sent to Play as it is
+    ],
   },
   appearance: "light",         // "light" | "dark"; dark output is suffixed `-dark`
   screenshotsDir: ".vitrine/screenshots", // optional; this is the default
@@ -106,6 +111,13 @@ export default defineConfig({
 `<screenshotsDir>/raw/` is a persistent store keyed by screen id + appearance, not a per-run output directory. A run may only write `raw/<id>[-dark].png` for a screen it captured, and remove that same path when that screen's flow failed (so `frame`/`publish` can never read an image no successful capture produced). It never touches another screen's file or the same screen's other appearance — so `--only` and single-appearance runs are additive. `capture --clean` is the only way to empty the directory, for cases like orphaned PNGs left behind by a renamed screen id.
 
 `diagnosticsDir` (optional, defaults to `.vitrine/diagnostics`) mirrors that same contract for per-screen troubleshooting evidence, keyed at `<diagnosticsDir>/<id>[-dark]/`. Unlike `raw/`, a directory is written for **every attempted screen, success or failure**: this also catches "it captured, but it's the wrong screen." A run wipes and recreates only the directories of the screens it attempted; `--clean` empties it alongside `raw/`. The directory is created and a baseline `context.json` written *before* flow validation runs, so even a screen that fails a convention check (never reaches Maestro) still leaves evidence behind. If a screen is named in `<diagnosticsDir>/last-run.json`, its directory exists and contains at least `context.json`. Full layout, error-code table, and how to read it: `skills/vitrine-flows/SKILL.md` (installed into a client repo via `vitrine skill install`).
+
+`publish.listing` (optional) is the ordered list of phone screenshots that `publish` uploads. The order is the listing order. `screens` is the catalog of images that `capture` and `frame` produce. `listing` is the story that the store shows, and the user curates it: they change the order, select light or dark per entry, and add images from other sources. Each entry is one of:
+
+- A bare file name, such as `"home.png"` or `"home-dark.png"`. It is a file in `<screenshotsDir>/framed/`. Its name must be `<id>.png` or `<id>-dark.png` for a screen in `screens`. `defineConfig` types these names from the declared `screens`, so the editor shows a typo before a run.
+- A path that starts with `./` or `../`, such as `"./marketing/budget-highlighted.png"`. It is an image that vitrine did not make, for example a framed image that the user edited in Photoshop to add a highlight. vitrine finds the file relative to `vitrine.config.ts`. vitrine does not add a frame, a caption or a background to it: `publish` sends the file to Play exactly as it is on disk. Before the upload, `publish` checks only that the file is a valid Play screenshot (format, dimensions, 8 MB limit).
+
+When `listing` is absent, `publish` uses every screen in config order, in the config `appearance`. A listing has 2 to 8 entries, which is the Play limit for phone screenshots in one language. Play has no dark-mode screenshot slot: every visitor sees the same set, so light or dark is a choice per entry, not a global rule.
 
 Example Maestro flow (`.vitrine/flows/home.yaml`):
 
@@ -161,18 +173,26 @@ Target: a set of design mockups that the repo owner approved. The pixel values b
 
 ### P0 — `publish`
 
+Usage context: a user runs `publish` after Google approves the app release, not at release time. The user captures, frames and edits the images during the review wait. So `publish` uploads the files that exist now. It never captures or frames again.
+
 - [ ] Auths with a service account key; clear error if key invalid or lacks permissions.
-- [ ] Uses the androidpublisher v3 **edits** flow: `edits.insert` → `edits.images.deleteall` (phoneScreenshots, configured locale) → upload framed images in config order → `edits.validate` → `edits.commit`.
-- [ ] `--dry-run`: performs everything through `edits.validate`, then **deletes the edit instead of committing**. Prints what would change.
-- [ ] Uploads in the order screens appear in config (order = listing order).
+- [ ] `frame` writes `<screenshotsDir>/framed/manifest.json`. For each framed image, the manifest records an input hash and an output hash. The input hash covers the raw file bytes, caption, subtitle, background, text colour, template, font, the shared text sizes, and the vitrine version. The output hash is the hash of the framed PNG. A run updates only the entries of the images it framed, the same as the `raw/` contract, so `--only` runs keep the other entries.
+- [ ] A framed entry is `stale` when it has no manifest entry, when its input hash differs from the hash of the current raw file and config, or when the framed file differs from the output hash (it was edited by hand). `stale` is a warning, not an error: the story table shows it, and the user decides. External `./` entries are never `stale`.
+- [ ] Resolves `publish.listing` (or the default when it is absent, see "Config Schema") to an ordered list of files before it calls the API.
+- [ ] Prints a numbered story table before any API call: position, file, caption (framed entries only), and status: `ok`, `missing`, `stale`, `too large`, or `invalid` (not PNG or JPEG, has an alpha channel, or wrong dimensions). An unknown framed name gets a "did you mean `<name>`?" hint. Any `missing`, `too large` or `invalid` entry, or a count outside 2–8, stops the run before the API is called.
+- [ ] Uses the androidpublisher v3 **edits** flow: `edits.insert` → `edits.images.deleteall` (phoneScreenshots, configured locale) → upload the listing files in listing order → `edits.validate` → `edits.commit`.
+- [ ] `edits.commit` always uses `changesInReviewBehavior: ERROR_IF_IN_REVIEW`. The default (`CANCEL_IN_REVIEW_AND_SUBMIT`) can cancel changes that are in review, such as a pending app release. When Play returns the in-review error, `publish` explains that changes are in review and that the user must run `publish` again after Google approves them. This is fixed behaviour, not an option.
+- [ ] `--dry-run`: performs everything through `edits.validate`, then **deletes the edit instead of committing**. It prints the same story table.
+- [ ] A real run asks `Commit <n> screenshots to <packageName>? [y/N]` after the story table. `--yes` skips the question. A run without a terminal (no TTY) and without `--yes` fails with a message that names `--yes`.
 - [ ] Prints a link to the Play Console listing page on success.
 
 ### P1
 
-- [ ] `vitrine init` — scaffolds config, `.vitrine/flows/` with one example, `.gitignore` entries for `secrets/` and `.vitrine/screenshots/` (generated output).
+- [ ] `vitrine init` — scaffolds config, `.vitrine/flows/` with one example, `.gitignore` entries for `.envs/` and `.vitrine/screenshots/` (generated output).
 - [ ] `capture --serial <device>` to target a specific device/emulator.
 - [ ] Feature graphic (1024×500) generation from the same frame templates.
 - [ ] Progress/spinner output (`ora` or similar).
+- [ ] Tests delete their temp folders. 8 test files create `vitrine-*` folders in the OS temp directory, and most never delete them. Proposed fix: a vitest `globalSetup` (`test/global-setup.ts`) creates one `vitrine-test-run-*` root folder per run and deletes it after the run, also when tests fail. It passes the path to the tests with `provide`/`inject`. A helper `makeTempDir(prefix)` in `test/temp-dir.ts` creates folders in that root and replaces the 18 `mkdtemp`/`mkdtempSync(join(tmpdir(), …))` calls. Check: after a full run, the number of `vitrine-*` folders in the temp directory does not grow. Separately, delete the folders that earlier runs left (list them first).
 
 ### P2 (design for, don't build)
 
@@ -183,20 +203,22 @@ Target: a set of design mockups that the repo owner approved. The pixel values b
 
 ## Testing Strategy
 
-- **Unit**: config validation (zod cases), publish payload construction (mock `googleapis`).
+- **Unit**: config validation (zod cases), listing resolution and story-table statuses, publish payload construction (mock `googleapis`).
 - **Golden-image tests for `frame`**: commit fixture raw PNGs + expected framed outputs; compare with `pixelmatch`, threshold 0 (framing must be deterministic). This is the core regression suite.
 - **Integration (manual, documented in README)**: `capture` against a local emulator; `publish --dry-run` against the real API — the edits API is transactional, so nothing touches the live listing until commit.
 - **Package-level**: test via `npm pack` + install the tarball into the app repo (closer to real consumption than `npm link`).
 
 ## Infrastructure (IaC)
 
-The only cloud infrastructure this project needs is Google Cloud plumbing for the Play Developer API. The tool repo ships this as a reusable **OpenTofu** module in `infra/` (the HCL below is also plain-Terraform-compatible); the app repo instantiates it with its own `project_id`:
+vitrine creates no cloud resources and ships no infrastructure code. `publish` needs only a Google service account JSON key at `publish.serviceAccountKeyPath`. The Play Developer API does not accept an API key for listing changes, so the credential must be a service account.
+
+The app project owns the setup. It is done once per app, in the app's own Google Cloud project, with the app project's own IaC, state and naming rules. vitrine documents the setup in its README as a copy-paste example. The example below is OpenTofu and also plain-Terraform-compatible:
 
 ```hcl
-# infra/main.tf
 terraform {
   required_providers {
     google = { source = "hashicorp/google", version = "~> 6.0" }
+    local  = { source = "hashicorp/local", version = "~> 2.5" }
   }
 }
 
@@ -212,20 +234,21 @@ resource "google_project_service" "androidpublisher" {
   disable_on_destroy = false
 }
 
-# Service account the CLI authenticates as
+# Service account that `vitrine publish` authenticates as
 resource "google_service_account" "vitrine" {
   account_id   = "vitrine-publisher"
   display_name = "vitrine Play listing publisher"
 }
 
-# Key used by `vitrine publish` (JSON)
+# JSON key that publish.serviceAccountKeyPath refers to
 resource "google_service_account_key" "vitrine" {
   service_account_id = google_service_account.vitrine.name
 }
 
 resource "local_sensitive_file" "key" {
-  content_base64 = google_service_account_key.vitrine.private_key
-  filename       = "${path.module}/../secrets/play-service-account.json"
+  content_base64  = google_service_account_key.vitrine.private_key
+  filename        = "${path.root}/../.envs/play-service-account.json"
+  file_permission = "0600"
 }
 
 output "service_account_email" {
@@ -235,9 +258,8 @@ output "service_account_email" {
 
 Requirements:
 
-- [ ] `infra/` ships with the module above, a `terraform.tfvars.example`, and a README section: `tofu init && tofu apply -var project_id=...`.
-- [ ] `secrets/` is gitignored; state file handling documented (local state is fine for a single dev; note the SA key lives in state).
-- [ ] No GCP IAM role bindings — this is intentional. Play listing permissions are **not** GCP IAM; they are granted inside Play Console.
+- [ ] The README has a "Publish setup" section with the example above, a note that the app project must gitignore the key file and must not commit or share the state file (the state contains the private key), and the manual checklist below.
+- [ ] No GCP IAM role bindings. This is intentional. Play listing permissions are **not** GCP IAM; they are granted inside Play Console.
 
 **Manual steps that cannot be automated** (no Terraform/API surface exists for Play Console account linking — document these in the README as a checklist):
 
@@ -250,7 +272,7 @@ Requirements:
 1. **capture** (days 1–3): CLI scaffold, config loader/validation, emulator + adb orchestration, Maestro runner. Exit criteria: raw PNGs for all configured screens from one command.
 2. **frame** (days 4–6): compositor + 3 templates + golden tests. Exit criteria: deterministic framed set at 1080×1920.
 2b. **polished frame**: stylized cropped device, Metropolis text, per-screen colours, status bar demo mode in `capture`. Exit criteria: the repo owner approves a framed set from the real app. Done.
-3. **publish** (days 7–8): `infra/` OpenTofu module + README checklist first, then API client, dry-run, commit path. Exit criteria: `tofu apply` produces a working key, dry-run passes validation against the real listing, one successful real commit.
+3. **publish** (days 7–8): API client, dry-run, commit path, and the README setup section. The app project creates the service account key with the README example. Exit criteria: dry-run passes validation against the real listing, one successful real commit, and one real commit attempt while changes are in review returns the in-review error (it does not cancel the review).
 
 Ship each milestone as a working increment — do not start `frame` until `capture` works end-to-end on the real app.
 
@@ -260,4 +282,6 @@ Ship each milestone as a working increment — do not start `frame` until `captu
 - ~~**Headline font**~~: resolved in `polished frame`. Metropolis (Unlicense) matches the headline and subtitle in the design mockups.
 - ~~**Templates after `polished frame`**~~: resolved. `minimal` uses the new text and bottom crop, without a bezel.
 - **Config format** (non-blocking): `.ts` config is the default; decide during implementation whether to also accept `.json` for zero-tooling consumers.
-- **Play Console linking** (owner: repo owner, blocking for milestone 3 only): the OpenTofu module provisions the API + service account + key, but the Play Console invite/permission grant (see Infrastructure section) is manual and must happen before `publish --dry-run` can be tested.
+- ~~**Stale framed images**~~: resolved. `frame` writes `framed/manifest.json` with input and output hashes, and `publish` compares it to the current raw files and config. Modification times were rejected because they miss a caption change in the config.
+- **In-review behaviour** (verify during milestone 3): the API reference does not say exactly which changes `CANCEL_IN_REVIEW_AND_SUBMIT` cancels, or the error text that `ERROR_IF_IN_REVIEW` returns. Verify both against the real app before the error message is final.
+- **Play Console linking** (owner: repo owner, blocking for milestone 3 only): the app project creates the service account and key, but the Play Console invite/permission grant (see Infrastructure section) is manual and must happen before `publish --dry-run` can be tested.
