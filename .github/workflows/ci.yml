@@ -17,8 +17,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 20.19 is the floor required by vite 8 (pulled by vitest 4).
-        node: ["20.19", "22"]
+        # 22.12 is the floor in package.json engines; @googleapis/androidpublisher needs Node 22.
+        node: ["22.12", "24"]
     steps:
       - uses: actions/checkout@v4
 

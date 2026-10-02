@@ -23,7 +23,7 @@ Updating the Google Play listing for our React Native (Expo) Android app is manu
 
 ## Architecture Overview
 
-TypeScript CLI package, Node 20+, developed in its **own standalone repo** (not inside the app repo — Metro's upward `node_modules` resolution and file watching conflict with nested packages, and a separate repo matches the goal of publishing to npm). The app repo is the first consumer: it holds only `vitrine.config.ts`, `.vitrine/` (flows and generated screenshots), the gitignored service account key, and installs the tool as a dev dependency (via `npm pack` tarball until published). `.vitrine/` namespaces everything vitrine owns under one dedicated root so it can't collide with folder names a client app already uses.
+TypeScript CLI package, Node 22.12+, developed in its **own standalone repo** (not inside the app repo — Metro's upward `node_modules` resolution and file watching conflict with nested packages, and a separate repo matches the goal of publishing to npm). The app repo is the first consumer: it holds only `vitrine.config.ts`, `.vitrine/` (flows and generated screenshots), the gitignored service account key, and installs the tool as a dev dependency (via `npm pack` tarball until published). `.vitrine/` namespaces everything vitrine owns under one dedicated root so it can't collide with folder names a client app already uses.
 
 Three independent commands sharing one config file:
 

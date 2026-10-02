@@ -3,12 +3,12 @@ import { defineConfig } from "tsdown";
 // tsdown loads its config (any extension) through `unrun`, its optional peer
 // dep. It's absent under `npm ci` unless declared, so `unrun` is an explicit
 // devDependency — without it CI fails with `Failed to import module "unrun"`
-// on Nodes lacking native TS stripping (e.g. Node 20.19).
+// on Nodes lacking native TS stripping
 export default defineConfig({
   entry: ["src/index.ts", "src/cli.ts"],
   format: "esm",
   platform: "node",
-  target: "node20",
+  target: "node22",
   dts: true,
   clean: true,
   sourcemap: true,

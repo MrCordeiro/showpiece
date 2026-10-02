@@ -21,7 +21,7 @@ Each command is independently runnable and shares one config file.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22.12+
 - [`maestro`](https://maestro.mobile.dev/getting-started/installing-maestro) on your
   PATH — installed separately and requires a Java runtime
 - Android platform-tools (`adb`) on your PATH
@@ -475,7 +475,7 @@ npm test            # vitest
 npm run build       # tsdown → dist/ (ESM + .d.ts + bin)
 ```
 
-CI (GitHub Actions) runs lint, typecheck, tests, and build on Node 20 and 22
+CI (GitHub Actions) runs lint, typecheck, tests, and build on Node 22.12 and 24
 for every push to `main` and every pull request.
 
 ## License
