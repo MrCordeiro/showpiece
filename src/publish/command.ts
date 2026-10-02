@@ -117,7 +117,7 @@ export async function runPublish(
   }
 
   const key = await readServiceAccountKey(config.publish.serviceAccountKeyPath);
-  const packageName = config.app.packageName;
+  const packageName = config.publish.packageName ?? config.app.packageName;
   const count = check.items.length;
 
   if (!options.dryRun && !options.yes) {
