@@ -22,7 +22,7 @@ export default defineConfig({
     font: "Inter",
   },
   publish: {
-    serviceAccountKeyPath: "./secrets/play-service-account.json",
+    serviceAccountKeyPath: "./.envs/play-service-account.json",
     track: "listing",
   },
   // System UI mode the device is put into before capturing. "dark" also saves
