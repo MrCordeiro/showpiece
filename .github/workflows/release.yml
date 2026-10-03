@@ -36,6 +36,12 @@ jobs:
       - name: Check that the tag matches package.json
         run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
 
+      # npm stage publish needs npm 11.21.0 or later.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      # The trusted publisher on npmjs.com allows only staged publishing, so a
+      # maintainer approves each version with 2FA before it is public.
       # prepack runs the build.
-      - name: Publish
-        run: npm publish --provenance --access public
+      - name: Stage the release on npm
+        run: npm stage publish --provenance --access public

@@ -110,7 +110,8 @@ Only the maintainer makes releases:
 
 1. In a PR, run `npm version <major|minor|patch> --no-git-tag-version`. This changes the version in `package.json` and `package-lock.json` only. Merge the PR.
 2. On GitHub, create a release from `main` with a new tag `v<version>`, for example `v0.2.0`. The tag must equal the version in `package.json`. "Generate release notes" drafts the notes from the merged PRs. The release notes are the changelog.
-3. Publish the release. The release workflow (`.github/workflows/release.yml`) runs the checks, compares the tag with `package.json`, and publishes the package to npm with provenance.
+3. Publish the release. The release workflow (`.github/workflows/release.yml`) runs the checks, compares the tag with `package.json`, and stages the package on npm with provenance.
+4. Approve the staged version with 2FA on npmjs.com, or with `npm stage approve <stage-id>`. The version is public only after this step.
 
 ## Writing style
 
