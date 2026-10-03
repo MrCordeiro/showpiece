@@ -39,7 +39,7 @@ describe("maybeShowInvite", () => {
 
     await maybeShowInvite(options);
 
-    expect(lines[0].includes("\x1b[")).toBe(coloured);
+    expect(lines.join("").includes("\x1b[")).toBe(coloured);
   });
 
   it.each([
