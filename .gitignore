@@ -19,6 +19,3 @@ coverage/
 
 # Local planning notes (not part of the repo)
 .superpowers/
-
-# Copied from docs/images/ by the Pages workflow
-site/images/
