@@ -2,7 +2,6 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-// An empty link turns the invite off.
 export const INVITE_URL =
   "https://cal.com/fernando-cordeiro/how-you-make-store-screenshots-showpiece";
 
