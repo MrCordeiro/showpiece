@@ -97,7 +97,7 @@ export const configSchema = z
     screenshotsDir: z
       .string()
       .min(1, "screenshotsDir must not be empty")
-      .default(".vitrine/screenshots"),
+      .default(".showpiece/screenshots"),
     /**
      * Base dir for per-screen troubleshooting evidence (Maestro's failure
      * screenshot, view hierarchy, command log). Same lifecycle as `raw/`: a run
@@ -108,7 +108,7 @@ export const configSchema = z
     diagnosticsDir: z
       .string()
       .min(1, "diagnosticsDir must not be empty")
-      .default(".vitrine/diagnostics"),
+      .default(".showpiece/diagnostics"),
     /**
      * System UI mode the device is put into before capturing. `"dark"` also
      * suffixes every output file with `-dark`, so both appearances can coexist
@@ -155,7 +155,7 @@ export type Config = z.output<typeof configSchema>;
 
 type PathSeparator = "/" | "\\";
 
-/** A `publish.listing` entry for an image that vitrine did not make. It is relative to the config file. */
+/** A `publish.listing` entry for an image that showpiece did not make. It is relative to the config file. */
 export type ExternalListingPath =
   | `.${PathSeparator}${string}`
   | `..${PathSeparator}${string}`;
@@ -170,7 +170,7 @@ type ScreenInput = z.input<typeof screenSchema>;
 
 /**
  * Identity helper that gives editor autocompletion / type-checking to a
- * `vitrine.config.ts`. Validation happens at load time via {@link configSchema}.
+ * `showpiece.config.ts`. Validation happens at load time via {@link configSchema}.
  * `Id` is inferred only from `screens[].id`. `NoInfer` stops a misspelled
  * `listing` entry from adding a new id, so the editor reports the typo.
  */

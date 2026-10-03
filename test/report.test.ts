@@ -98,7 +98,7 @@ describe("writeRunReport", () => {
       finishedAt: "2026-08-13T00:00:05.000Z",
       appearance: "light",
       serial: "emulator-5554",
-      configPath: "/repo/vitrine.config.ts",
+      configPath: "/repo/showpiece.config.ts",
       packageName: "com.example.app",
       results,
     });

@@ -15,7 +15,7 @@ declare module "vitest" {
  * test/temp-dir.ts, never `mkdtemp` in the OS temp directory.
  */
 export default function setup(project: TestProject): () => void {
-  const tempRoot = mkdtempSync(join(tmpdir(), "vitrine-test-run-"));
+  const tempRoot = mkdtempSync(join(tmpdir(), "showpiece-test-run-"));
   project.provide("tempRoot", tempRoot);
   return () => rmSync(tempRoot, { recursive: true, force: true });
 }

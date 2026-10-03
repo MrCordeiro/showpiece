@@ -200,13 +200,13 @@ async function staleness(
   if (!recorded) {
     return {
       status: "stale",
-      detail: 'vitrine has no record of this file. Run "vitrine frame".',
+      detail: 'showpiece has no record of this file. Run "showpiece frame".',
     };
   }
   if (recorded.outputHash !== sha256(framed)) {
     return {
       status: "stale",
-      detail: 'The framed file changed after "vitrine frame" wrote it.',
+      detail: 'The framed file changed after "showpiece frame" wrote it.',
     };
   }
   const rawPath = join(
@@ -217,7 +217,7 @@ async function staleness(
     return {
       status: "stale",
       detail:
-        "The raw screenshot is missing, so vitrine cannot check this file.",
+        "The raw screenshot is missing, so showpiece cannot check this file.",
     };
   }
   const expected = inputHash(
@@ -228,7 +228,7 @@ async function staleness(
     return {
       status: "stale",
       detail:
-        'The raw screenshot or the config changed after framing. Run "vitrine frame".',
+        'The raw screenshot or the config changed after framing. Run "showpiece frame".',
     };
   }
   return { status: "ok" };
@@ -254,7 +254,7 @@ async function checkItem(
       detail:
         item.kind === "external"
           ? `File not found: ${item.path}`
-          : 'Not framed yet. Run "vitrine capture", then "vitrine frame".',
+          : 'Not framed yet. Run "showpiece capture", then "showpiece frame".',
     };
   }
   const file = await readFile(item.path);

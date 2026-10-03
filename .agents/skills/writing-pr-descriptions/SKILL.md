@@ -65,7 +65,7 @@ Prose is the slowest form on the page. Before writing a sentence, ask what carri
 
 | The fact you have                                                                    | The form that carries it                                  |
 | ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| A change to a flow or topology (CI wiring, pipelines, state machines, request paths) | Two branded `flowchart` blocks, before first              |
+| A change to a flow or topology (CI wiring, pipelines, state machines, request paths) | Two `flowchart` blocks, before first                      |
 | Several values compared across the same dimensions                                   | A markdown table                                          |
 | A config or setting change                                                           | A fenced `diff` block                                     |
 | Existing code a reviewer needs to see                                                | A line-range permalink, which GitHub renders as a snippet |
@@ -77,19 +77,7 @@ No PR needs every form. Reach for one because it makes review faster, never as d
 
 ### Mermaid
 
-Keep diagrams simple. A syntax error renders as an error block. Pick `TD` for tall pipelines, `LR` for wide paths. Mermaid cannot read CSS vars, so use the hex directly, and pair every `fill` with a text `color` so nodes stay legible in GitHub light and dark.
-
-```text
-classDef czBrand fill:#39ce95,stroke:#00a865,color:#1a1a1a;
-classDef czDanger fill:#c05a63,stroke:#8f3b46,color:#fff;
-classDef czAccent fill:#ffd83b,stroke:#a68a17,color:#1a1a1a;
-classDef czGray fill:#d4d5d6,stroke:#b7b8b9,color:#1a1a1a;
-```
-
-The hexes are the Cashzilla tokens from `src/constants/colors.ts`. Assign by role
-(`class NodeA,NodeB czBrand;`): `czBrand` primary paths and the happy path, `czDanger`
-error paths and external failures, `czAccent` entry and exit, `czGray` data and
-artifacts. Shape by kind: `{{hexagon}}` decisions, `[rect]` steps.
+Keep diagrams simple. A syntax error renders as an error block. Pick `TD` for tall pipelines, `LR` for wide paths. Shape by kind: `{{hexagon}}` decisions, `[rect]` steps.
 
 ## Pass 3: cut
 
@@ -230,7 +218,7 @@ A "no" anywhere means the body is ordered for the writer, not the reader. Go bac
 9. Rewrite every passive sentence in active voice, unless the actor is genuinely unknown. Break every noun string longer than three words with a preposition.
 10. Does any sentence take its author as the subject? Rewrite it around the change. "I", "me" and "my" appear nowhere.
 11. Does the PR change anything a person sees? Include before-and-after screenshots, or say why nothing looks different.
-12. Does the PR change a flow or topology? Include branded before-and-after diagrams.
+12. Does the PR change a flow or topology? Include before-and-after diagrams.
 13. Does prose compare several values across the same dimensions? Replace it with a table.
 14. Does every claim about what you ran, measured or saw link its evidence, or say it went unchecked? Descriptions of behavior need no link.
 15. Did a `<!-- -->` template comment survive anywhere? That section is unfilled. Fill it or delete it.

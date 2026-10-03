@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../src/config/schema.js";
+import { INVITE_MARK, enableInvite } from "./invite-env.js";
 import { makeTempDir } from "./temp-dir.js";
 
 vi.mock("../src/config/load.js", () => ({ loadConfig: vi.fn() }));
@@ -28,13 +29,13 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
       serviceAccountKeyPath: resolve(configDir, "secrets/key.json"),
       track: "listing",
     },
-    screenshotsDir: resolve(configDir, ".vitrine/screenshots"),
-    diagnosticsDir: resolve(configDir, ".vitrine/diagnostics"),
+    screenshotsDir: resolve(configDir, ".showpiece/screenshots"),
+    diagnosticsDir: resolve(configDir, ".showpiece/diagnostics"),
     appearance: "light",
     screens: [
       {
         id: "home",
-        flow: resolve(configDir, ".vitrine/flows/home.yaml"),
+        flow: resolve(configDir, ".showpiece/flows/home.yaml"),
         caption: "Track everything",
       },
     ],
@@ -56,7 +57,7 @@ describe("runFrame", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    screenshotsDir = makeTempDir("vitrine-frame-");
+    screenshotsDir = makeTempDir("showpiece-frame-");
     mkdirSync(join(screenshotsDir, "raw"), { recursive: true });
   });
 
@@ -65,7 +66,7 @@ describe("runFrame", () => {
     await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ screenshotsDir }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -82,7 +83,7 @@ describe("runFrame", () => {
     await writeSampleRaw(join(screenshotsDir, "raw", "home-dark.png"));
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ screenshotsDir }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -100,7 +101,7 @@ describe("runFrame", () => {
     const { loadConfig } = await import("../src/config/load.js");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ screenshotsDir }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -124,7 +125,7 @@ describe("runFrame", () => {
           { id: "profile", flow: "profile.yaml", caption: "Your data" },
         ],
       }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -143,7 +144,37 @@ describe("runFrame", () => {
     expect(existsSync(join(screenshotsDir, "framed", "profile.png"))).toBe(
       false,
     );
-    expect(output).toContain("vitrine capture");
+    expect(output).toContain("showpiece capture");
+  });
+
+  it.each([
+    ["a successful run", true],
+    ["a failed run", false],
+  ])("shows the interview invite only after %s", async (_, hasRaw) => {
+    const { loadConfig } = await import("../src/config/load.js");
+    if (hasRaw) await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ screenshotsDir }),
+      configPath: resolve(configDir, "showpiece.config.ts"),
+      configDir,
+    });
+    const invite = enableInvite();
+    const writeSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    let output = "";
+    try {
+      const { runFrame } = await import("../src/frame/command.js");
+      await runFrame({});
+      output = writeSpy.mock.calls.map((call) => String(call[0])).join("");
+    } finally {
+      writeSpy.mockRestore();
+      invite.restore();
+    }
+
+    expect(output.includes(INVITE_MARK)).toBe(hasRaw);
+    expect(existsSync(invite.stateFile)).toBe(hasRaw);
   });
 
   it("sizes text over every configured screen, including ones --only skips", async () => {
@@ -160,7 +191,7 @@ describe("runFrame", () => {
     const loadWith = (screens: Config["screens"]) =>
       vi.mocked(loadConfig).mockResolvedValue({
         config: makeConfig({ screenshotsDir, screens }),
-        configPath: resolve(configDir, "vitrine.config.ts"),
+        configPath: resolve(configDir, "showpiece.config.ts"),
         configDir,
       });
 
@@ -186,7 +217,7 @@ describe("runFrame", () => {
           { id: "profile", flow: "profile.yaml", caption: "" },
         ],
       }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -219,7 +250,7 @@ describe("runFrame", () => {
           { id: "profile", flow: "profile.yaml", caption: "" },
         ],
       }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 

@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { androidpublisher, auth } from "@googleapis/androidpublisher";
-import { VitrineError } from "../util/errors.js";
+import { ShowpieceError } from "../util/errors.js";
 
 export interface ServiceAccountKey {
   keyPath: string;
@@ -44,7 +44,7 @@ export async function readServiceAccountKey(
   try {
     text = await readFile(keyPath, "utf8");
   } catch (error) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_PUBLISH_KEY_NOT_FOUND",
       `Service account key not found: ${keyPath}. Create the key as README "Publish setup" describes, or fix publish.serviceAccountKeyPath.`,
       { cause: error },
@@ -65,7 +65,7 @@ export async function readServiceAccountKey(
     typeof key.client_email !== "string" ||
     typeof key.private_key !== "string"
   ) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_PUBLISH_KEY_INVALID",
       `${keyPath} is not a Google service account JSON key. It must contain "type": "service_account", "client_email" and "private_key".`,
     );
@@ -95,8 +95,8 @@ export function toPublishError(
   step: PlayStep,
   key: ServiceAccountKey,
   packageName: string,
-): VitrineError {
-  if (error instanceof VitrineError) return error;
+): ShowpieceError {
+  if (error instanceof ShowpieceError) return error;
   const status = httpStatus(error);
   const message = error instanceof Error ? error.message : String(error);
   const options = { cause: error };
@@ -105,21 +105,21 @@ export function toPublishError(
     status === 401 ||
     /invalid_grant|invalid_client|private key/i.test(message)
   ) {
-    return new VitrineError(
+    return new ShowpieceError(
       "E_PUBLISH_AUTH",
       `Google rejected the service account key ${key.keyPath}: ${message}. Somebody may have deleted the key, or the key is wrong. Create a new key as README "Publish setup" describes.`,
       options,
     );
   }
   if (status === 403) {
-    return new VitrineError(
+    return new ShowpieceError(
       "E_PUBLISH_PERMISSION",
       `The service account ${key.clientEmail} has no permission for ${packageName}: ${message}. In Play Console > Users and permissions, invite this account and grant "Manage store presence" for the app. A new permission can take a few minutes to start working.`,
       options,
     );
   }
   if (step === "insert" && status === 404) {
-    return new VitrineError(
+    return new ShowpieceError(
       "E_PUBLISH_APP_NOT_FOUND",
       `Play has no app ${packageName} that ${key.clientEmail} can open: ${message}. Check app.packageName in the config.`,
       options,
@@ -134,13 +134,13 @@ export function toPublishError(
     /review/i.test(message) &&
     !/changesNotSentForReview/i.test(message)
   ) {
-    return new VitrineError(
+    return new ShowpieceError(
       "E_PUBLISH_IN_REVIEW",
-      `Play has changes in review for ${packageName}, so vitrine did not commit. Run "vitrine publish" again after Google approves them. Play said: ${message}`,
+      `Play has changes in review for ${packageName}, so showpiece did not commit. Run "showpiece publish" again after Google approves them. Play said: ${message}`,
       options,
     );
   }
-  return new VitrineError(
+  return new ShowpieceError(
     "E_PUBLISH_API",
     `Play API error during ${step} (HTTP ${status ?? "unknown"}): ${message}`,
     options,

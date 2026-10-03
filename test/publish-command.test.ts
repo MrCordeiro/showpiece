@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import sharp from "sharp";
 import {
@@ -12,7 +12,8 @@ import {
 } from "vitest";
 import type { Config } from "../src/config/schema.js";
 import type { PlayClient } from "../src/publish/play.js";
-import { VitrineError } from "../src/util/errors.js";
+import { ShowpieceError } from "../src/util/errors.js";
+import { INVITE_MARK, enableInvite } from "./invite-env.js";
 import { makeTempDir } from "./temp-dir.js";
 
 vi.mock("../src/config/load.js", () => ({ loadConfig: vi.fn() }));
@@ -41,8 +42,8 @@ function makeConfig(listing?: string[]): Config {
       track: "listing",
       listing,
     },
-    screenshotsDir: join(root, ".vitrine/screenshots"),
-    diagnosticsDir: join(root, ".vitrine/diagnostics"),
+    screenshotsDir: join(root, ".showpiece/screenshots"),
+    diagnosticsDir: join(root, ".showpiece/diagnostics"),
     appearance: "light",
     screens: [
       { id: "home", flow: "home.yaml", caption: "Track everything" },
@@ -55,7 +56,7 @@ async function useConfig(config: Config): Promise<void> {
   const { loadConfig } = await import("../src/config/load.js");
   vi.mocked(loadConfig).mockResolvedValue({
     config,
-    configPath: join(root, "vitrine.config.ts"),
+    configPath: join(root, "showpiece.config.ts"),
     configDir: root,
   });
 }
@@ -66,7 +67,7 @@ function writeKey(): void {
     join(root, "secrets/key.json"),
     JSON.stringify({
       type: "service_account",
-      client_email: "vitrine@p.iam.gserviceaccount.com",
+      client_email: "showpiece@p.iam.gserviceaccount.com",
       private_key: "-----BEGIN PRIVATE KEY-----",
     }),
   );
@@ -113,7 +114,7 @@ function fakeClient(overrides: Partial<PlayClient> = {}) {
 // Framing loads sharp and fonts, so it runs once. Each test gets a copy, and
 // the copied manifest stays valid because it records hashes, not paths.
 beforeAll(async () => {
-  root = makeTempDir("vitrine-publish-template-");
+  root = makeTempDir("showpiece-publish-template-");
   const config = makeConfig();
   const raw = await sharp({
     create: { width: 400, height: 800, channels: 3, background: "#3b82f6" },
@@ -135,8 +136,8 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  root = makeTempDir("vitrine-publish-");
-  cpSync(framedTemplate, join(root, ".vitrine/screenshots"), {
+  root = makeTempDir("showpiece-publish-");
+  cpSync(framedTemplate, join(root, ".showpiece/screenshots"), {
     recursive: true,
   });
   output = "";
@@ -199,6 +200,34 @@ describe("runPublish", () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(output).toContain("replace the 3 current screenshots");
   });
+
+  it.each([
+    ["a dry run", { dryRun: true }, false, true],
+    ["a commit", { yes: true }, false, true],
+    ["a declined run", {}, true, false],
+  ])(
+    "shows the interview invite only after %s",
+    async (_, options, interactive, shown) => {
+      await useConfig(makeConfig());
+      writeKey();
+      const fake = fakeClient();
+      const { runPublish } = await import("../src/publish/command.js");
+      const invite = enableInvite();
+
+      try {
+        await runPublish(options, {
+          createClient: fake.createClient,
+          confirm: async () => false,
+          isInteractive: interactive,
+        });
+      } finally {
+        invite.restore();
+      }
+
+      expect(output.includes(INVITE_MARK)).toBe(shown);
+      expect(existsSync(invite.stateFile)).toBe(shown);
+    },
+  );
 
   it("makes no API call when the user declines", async () => {
     await useConfig(makeConfig());
@@ -290,7 +319,7 @@ describe("runPublish", () => {
       "an upload fails",
       () => ({
         uploadScreenshot: vi.fn(async () => {
-          throw new VitrineError("E_PUBLISH_API", "upload failed");
+          throw new ShowpieceError("E_PUBLISH_API", "upload failed");
         }),
       }),
       "E_PUBLISH_API",
@@ -306,7 +335,7 @@ describe("runPublish", () => {
       "the commit fails",
       () => ({
         commitEdit: vi.fn(async () => {
-          throw new VitrineError("E_PUBLISH_IN_REVIEW", "in review");
+          throw new ShowpieceError("E_PUBLISH_IN_REVIEW", "in review");
         }),
       }),
       "E_PUBLISH_IN_REVIEW",

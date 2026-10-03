@@ -5,6 +5,8 @@ export default defineConfig({
     environment: "node",
     include: ["test/**/*.test.ts"],
     globalSetup: ["test/global-setup.ts"],
+    // Command tests must not write the invite state file in the real ~/.config.
+    env: { SHOWPIECE_NO_INVITE: "1" },
     // Tests that run `runFrame` load sharp and fonts cold in parallel workers.
     testTimeout: 20_000,
   },

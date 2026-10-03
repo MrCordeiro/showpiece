@@ -9,7 +9,7 @@ import { runSkillInstall } from "./skill/command.js";
 const program = new Command();
 
 program
-  .name("vitrine")
+  .name("showpiece")
   .description("Play Store screenshot pipeline: capture, frame, publish.")
   .version(pkg.version);
 
@@ -81,12 +81,12 @@ program
 
 const skill = program
   .command("skill")
-  .description("Manage vitrine's bundled Claude Code skill.");
+  .description("Manage showpiece's bundled Claude Code skill.");
 
 skill
   .command("install")
   .description(
-    "Copy the bundled vitrine-flows skill into .claude/skills/ in this repo.",
+    "Copy the bundled showpiece-flows skill into .claude/skills/ in this repo.",
   )
   .option("--force", "overwrite an already-installed copy")
   .action(async (opts) => {

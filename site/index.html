@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>showpiece: Google Play screenshots from the terminal</title>
+  <meta name="description" content="showpiece captures your Android app with Maestro, frames the screenshots, and publishes them to your Google Play listing.">
+  <meta property="og:title" content="showpiece">
+  <meta property="og:description" content="Capture, frame and publish your Google Play screenshots from the terminal, with one config file.">
+  <meta property="og:image" content="https://mrcordeiro.github.io/showpiece/images/before-after.png">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a2e;
+      --muted: #5b6070;
+      --line: #e3e5ea;
+      --code-bg: #f4f5f8;
+      --accent: #2f6fdf;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12131c;
+        --fg: #eceef4;
+        --muted: #a2a7b5;
+        --line: #2a2d3b;
+        --code-bg: #1c1e2a;
+        --accent: #7aa7ff;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 860px; margin: 0 auto; padding: 56px 16px 80px; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+    h2 { font-size: 1.3rem; margin: 56px 0 12px; }
+    p { margin: 0 0 12px; }
+    .lead { font-size: 1.2rem; color: var(--muted); max-width: 640px; }
+    .name { font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+    img { display: block; max-width: 100%; height: auto; margin: 40px auto 0; }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    ul.points { list-style: none; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    ul.points li { border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    ul.points strong { display: block; margin-bottom: 4px; }
+    a { color: var(--accent); }
+    .links { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 24px; }
+    footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="name">showpiece</p>
+    <h1>Your app changed. Your Play Store screenshots did not.</h1>
+    <p class="lead">showpiece captures your Android app with Maestro, frames the screenshots, and publishes them to your store listing. One config file, no production build, no design tool. For React Native and Expo apps. 📸</p>
+
+    <div class="links">
+      <a href="https://github.com/MrCordeiro/showpiece#quickstart">Quickstart</a>
+      <a href="https://github.com/MrCordeiro/showpiece">GitHub</a>
+      <a href="https://www.npmjs.com/package/showpiece">npm</a>
+    </div>
+
+    <img src="images/before-after.png" width="1092" height="960" alt="A raw screenshot of an app next to the same screenshot after showpiece frame: a caption above a stylized phone on a dark background">
+
+    <!-- TODO: demo GIF of capture → frame → publish --dry-run -->
+
+    <h2>Install</h2>
+<pre>npm install --save-dev showpiece
+npx showpiece capture
+npx showpiece frame
+npx showpiece publish --dry-run</pre>
+
+    <h2>What it does</h2>
+    <ul class="points">
+      <li><strong>No production build</strong>It captures any installed build: a Metro debug build, an Expo dev client or an old APK.</li>
+      <li><strong>No design tool</strong>Three templates make store-ready 1080×1920 images with your captions.</li>
+      <li><strong>No Play Console upload</strong>It replaces the listing screenshots with the Play Developer API. <code>--dry-run</code> checks everything without a change.</li>
+    </ul>
+
+    <h2>Limits</h2>
+    <p>showpiece supports Android and Google Play only, with one locale. iOS and several locales are on the <a href="https://github.com/MrCordeiro/showpiece/labels/roadmap">roadmap</a>.</p>
+
+    <h2>Help shape showpiece</h2>
+    <p>Thank you for being here! ٩(ˊᗜˋ*)و</p>
+    <p>showpiece is young, and what I build next depends on how you make store screenshots today. Maybe you use showpiece every week, maybe you tried it once, or maybe you are only curious. I want to hear from you either way.</p>
+    <ul>
+      <li><strong>A 15-min call:</strong> <a href="https://cal.com/fernando-cordeiro/how-you-make-store-screenshots-showpiece">book a time</a>. These calls decide the roadmap. As thanks, I email you a one-page summary of what I learn: how other teams make their store screenshots, and what I build next.</li>
+      <li><strong>No time for a call?</strong> Tell me in <a href="https://github.com/MrCordeiro/showpiece/discussions">Discussions</a>.</li>
+    </ul>
+
+    <footer>
+      MIT license · <a href="https://github.com/MrCordeiro/showpiece/blob/main/README.md">Documentation</a> · <a href="https://github.com/MrCordeiro/showpiece/issues/new/choose">Report a bug</a>
+    </footer>
+  </main>
+</body>
+</html>

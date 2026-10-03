@@ -2,9 +2,9 @@ import { existsSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { VitrineError } from "../util/errors.js";
+import { ShowpieceError } from "../util/errors.js";
 
-const SKILL_RELATIVE_PATH = join("skills", "vitrine-flows", "SKILL.md");
+const SKILL_RELATIVE_PATH = join("skills", "showpiece-flows", "SKILL.md");
 
 /**
  * Locate the packaged skill file, walking up from a starting directory. This
@@ -31,9 +31,9 @@ export interface SkillInstallOptions {
 }
 
 /**
- * Copy vitrine's bundled Claude Code skill into the consuming repo, at
- * `.claude/skills/vitrine-flows/SKILL.md`, where Claude Code auto-discovers
- * it once committed. Later folds into `vitrine init` (SPEC P1).
+ * Copy showpiece's bundled Claude Code skill into the consuming repo, at
+ * `.claude/skills/showpiece-flows/SKILL.md`, where Claude Code auto-discovers
+ * it once committed. `showpiece init` will also install it (issue #7).
  */
 export async function runSkillInstall(
   options: SkillInstallOptions = {},
@@ -42,17 +42,17 @@ export async function runSkillInstall(
   const here = dirname(fileURLToPath(import.meta.url));
   const source = findPackagedSkill(here);
   if (!source) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_SKILL_NOT_FOUND",
-      "Could not locate vitrine's packaged skill (skills/vitrine-flows/SKILL.md missing). This looks like a broken install. Please try reinstalling vitrine.",
+      "Could not locate showpiece's packaged skill (skills/showpiece-flows/SKILL.md missing). This looks like a broken install. Please try reinstalling showpiece.",
     );
   }
 
-  const destDir = join(cwd, ".claude", "skills", "vitrine-flows");
+  const destDir = join(cwd, ".claude", "skills", "showpiece-flows");
   const dest = join(destDir, "SKILL.md");
 
   if (existsSync(dest) && !options.force) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_SKILL_ALREADY_INSTALLED",
       `${dest} already exists. Re-run with --force to overwrite it.`,
     );

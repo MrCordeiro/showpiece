@@ -4,7 +4,8 @@ import { loadConfig } from "../config/load.js";
 import { sharedTextSizes } from "../frame/caption.js";
 import { loadFont } from "../frame/font.js";
 import { readManifest } from "../frame/manifest.js";
-import { VitrineError } from "../util/errors.js";
+import { ShowpieceError } from "../util/errors.js";
+import { maybeShowInvite } from "../util/invite.js";
 import {
   type CheckedItem,
   checkListing,
@@ -59,7 +60,7 @@ async function replaceScreenshots(
   items: CheckedItem[],
 ): Promise<number> {
   if (!(await client.hasListing(editId, language))) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_PUBLISH_LOCALE",
       `The Play store listing has no language "${language}". Play ignores uploads for a language that the listing does not have. Set device.locale to a language of the store listing, for example "en-US".`,
     );
@@ -72,9 +73,9 @@ async function replaceScreenshots(
   }
   const uploaded = await client.countScreenshots(editId, language);
   if (uploaded !== items.length) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_PUBLISH_UPLOAD_COUNT",
-      `Play has ${uploaded} phone screenshots for "${language}" after the upload, but vitrine uploaded ${items.length}.`,
+      `Play has ${uploaded} phone screenshots for "${language}" after the upload, but showpiece uploaded ${items.length}.`,
     );
   }
   return previous;
@@ -89,7 +90,7 @@ async function deleteEditQuietly(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stdout.write(
-      `! vitrine could not delete the Play edit ${editId}: ${message}. Nothing was committed.\n`,
+      `! showpiece could not delete the Play edit ${editId}: ${message}. Nothing was committed.\n`,
     );
   }
 }
@@ -123,9 +124,9 @@ export async function runPublish(
   if (!options.dryRun && !options.yes) {
     const interactive = deps.isInteractive ?? process.stdin.isTTY === true;
     if (!interactive) {
-      throw new VitrineError(
+      throw new ShowpieceError(
         "E_PUBLISH_CONFIRM_REQUIRED",
-        'publish asks for a confirmation before it commits, and this terminal cannot answer. Run "vitrine publish --yes" to commit without the question.',
+        'publish asks for a confirmation before it commits, and this terminal cannot answer. Run "showpiece publish --yes" to commit without the question.',
       );
     }
     const confirm = deps.confirm ?? askYesNo;
@@ -157,8 +158,9 @@ export async function runPublish(
 
   if (options.dryRun) {
     process.stdout.write(
-      `\n✓ Dry run: Play validated ${count} screenshots for "${language}". They would replace the ${previous} current screenshots. vitrine deleted the edit, so the listing did not change.\n`,
+      `\n✓ Dry run: Play validated ${count} screenshots for "${language}". They would replace the ${previous} current screenshots. showpiece deleted the edit, so the listing did not change.\n`,
     );
+    await maybeShowInvite();
     return 0;
   }
   process.stdout.write(
@@ -168,5 +170,6 @@ export async function runPublish(
       `  Store page:   https://play.google.com/store/apps/details?id=${packageName}\n`,
     ].join("\n"),
   );
+  await maybeShowInvite();
   return 0;
 }

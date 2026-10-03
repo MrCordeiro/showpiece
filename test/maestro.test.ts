@@ -100,7 +100,7 @@ vi.mock("../src/capture/diagnostics.js", () => ({
 
 const rawDir = "/tmp/raw";
 const diagnosticsDir = "/tmp/diagnostics";
-const staging = `${join(rawDir, ".vitrine-")}abc123`;
+const staging = `${join(rawDir, ".showpiece-")}abc123`;
 
 const runFlowOptions = {
   rawDir,

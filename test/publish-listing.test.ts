@@ -42,7 +42,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
       track: "listing",
     },
     screenshotsDir,
-    diagnosticsDir: join(root, ".vitrine/diagnostics"),
+    diagnosticsDir: join(root, ".showpiece/diagnostics"),
     appearance: "light",
     screens: [
       { id: "home", flow: "home.yaml", caption: "Track everything" },
@@ -76,7 +76,7 @@ async function frameAll(config: Config): Promise<void> {
   const { loadConfig } = await import("../src/config/load.js");
   vi.mocked(loadConfig).mockResolvedValue({
     config,
-    configPath: join(root, "vitrine.config.ts"),
+    configPath: join(root, "showpiece.config.ts"),
     configDir: root,
   });
   const { runFrame } = await import("../src/frame/command.js");
@@ -87,8 +87,8 @@ async function frameAll(config: Config): Promise<void> {
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  root = makeTempDir("vitrine-listing-");
-  screenshotsDir = join(root, ".vitrine/screenshots");
+  root = makeTempDir("showpiece-listing-");
+  screenshotsDir = join(root, ".showpiece/screenshots");
   mkdirSync(join(screenshotsDir, "raw"), { recursive: true });
   mkdirSync(join(screenshotsDir, "framed"), { recursive: true });
   writeFileSync(join(screenshotsDir, "raw", "home.png"), await png(400, 800));
@@ -264,7 +264,7 @@ describe("checkListing", () => {
       await context(config),
     );
     expect(check.items[0]?.status).toBe("missing");
-    expect(check.items[0]?.detail).toContain("vitrine frame");
+    expect(check.items[0]?.detail).toContain("showpiece frame");
   });
 
   it("accepts a valid external image without a manifest entry", async () => {

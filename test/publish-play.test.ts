@@ -25,7 +25,7 @@ vi.mock("@googleapis/androidpublisher", () => ({
 
 const key = {
   keyPath: "/secrets/key.json",
-  clientEmail: "vitrine@p.iam.gserviceaccount.com",
+  clientEmail: "showpiece@p.iam.gserviceaccount.com",
 };
 const pkg = "com.example.app";
 
@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 describe("readServiceAccountKey", () => {
-  const dir = makeTempDir("vitrine-key-");
+  const dir = makeTempDir("showpiece-key-");
 
   it("returns the path and client email of a valid key", async () => {
     const { readServiceAccountKey } = await import("../src/publish/play.js");
@@ -110,7 +110,7 @@ describe("createPlayClient", () => {
     "uploads %s as a phone screenshot with type %s",
     async (file, mimeType) => {
       const { createPlayClient } = await import("../src/publish/play.js");
-      const path = join(makeTempDir("vitrine-up-"), file);
+      const path = join(makeTempDir("showpiece-up-"), file);
       writeFileSync(path, "x");
       api.edits.images.upload.mockResolvedValue({ data: {} });
       await createPlayClient(key, pkg).uploadScreenshot(

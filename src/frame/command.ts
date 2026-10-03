@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { selectScreens } from "../capture/command.js";
 import { loadConfig } from "../config/load.js";
 import type { Config, ScreenConfig } from "../config/schema.js";
+import { maybeShowInvite } from "../util/invite.js";
 import { type StepResult, printSummary } from "../util/report.js";
 import { type SharedTextSizes, sharedTextSizes } from "./caption.js";
 import { assertWithinPlayLimit, composeFrame } from "./compositor.js";
@@ -24,7 +25,7 @@ export interface FrameOptions {
   only?: string;
 }
 
-/** Light and dark raw files share this suffix convention with `capture` (SPEC.md "Config Schema"). */
+/** Light and dark raw files share this suffix convention with `capture` (README "Dark mode"). */
 const APPEARANCE_SUFFIXES = ["", "-dark"] as const;
 
 /**
@@ -49,7 +50,7 @@ async function frameScreen(
       {
         id: screen.id,
         status: "failed",
-        error: `No raw screenshot found for "${screen.id}" — run "vitrine capture" first.`,
+        error: `No raw screenshot found for "${screen.id}" — run "showpiece capture" first.`,
       },
     ];
   }
@@ -120,5 +121,7 @@ export async function runFrame(options: FrameOptions): Promise<number> {
   await writeManifest(framedDir, manifest);
 
   const failures = printSummary(results, { title: "Frame summary" });
-  return failures > 0 ? 1 : 0;
+  if (failures > 0) return 1;
+  await maybeShowInvite();
+  return 0;
 }

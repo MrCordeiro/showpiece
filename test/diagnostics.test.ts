@@ -65,7 +65,7 @@ describe("firstFailedCommand", () => {
     );
     // The fixture's array order is NOT execution order (mirrors real Maestro
     // dumps: setup commands are appended highest-sequenceNumber-first). The
-    // fixture itself is captured verbatim from a real failing cashzilla run
+    // fixture itself is captured verbatim from a real failing app run
     // (2026-08-13) — `assertVisible: "Net Worth"` compiles to
     // assertConditionCommand/condition.visible.textRegex, not a top-level
     // `text` field.

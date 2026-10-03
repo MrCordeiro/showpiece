@@ -1,12 +1,28 @@
 {
-  "name": "vitrine",
+  "name": "showpiece",
   "version": "0.1.0",
   "description": "Play Store screenshot pipeline CLI: capture with Maestro, frame with sharp, publish via the Google Play Developer API.",
   "type": "module",
   "license": "MIT",
   "author": "Fernando Cordeiro",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MrCordeiro/showpiece.git"
+  },
+  "homepage": "https://github.com/MrCordeiro/showpiece#readme",
+  "bugs": {
+    "url": "https://github.com/MrCordeiro/showpiece/issues"
+  },
+  "keywords": [
+    "play-store",
+    "screenshots",
+    "maestro",
+    "expo",
+    "react-native",
+    "google-play"
+  ],
   "bin": {
-    "vitrine": "./dist/cli.js"
+    "showpiece": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",

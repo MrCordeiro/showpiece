@@ -1,4 +1,4 @@
-import { defineConfig } from "vitrine";
+import { defineConfig } from "showpiece";
 
 export default defineConfig({
   app: {
@@ -27,23 +27,23 @@ export default defineConfig({
   },
   // System UI mode the device is put into before capturing. "dark" also saves
   // every screenshot with a `-dark` suffix. Override per run with
-  // `npx vitrine capture --appearance dark`. Your app must follow the system
+  // `npx showpiece capture --appearance dark`. Your app must follow the system
   // appearance for this to change anything.
   appearance: "light",
   screens: [
     {
       id: "home",
-      flow: ".vitrine/flows/home.yaml",
+      flow: ".showpiece/flows/home.yaml",
       caption: "Track everything in one place",
     },
     {
       id: "profile",
-      flow: ".vitrine/flows/profile.yaml",
+      flow: ".showpiece/flows/profile.yaml",
       caption: "Your data, your way",
     },
     {
       id: "settings",
-      flow: ".vitrine/flows/settings.yaml",
+      flow: ".showpiece/flows/settings.yaml",
       caption: "Make it yours",
     },
   ],
