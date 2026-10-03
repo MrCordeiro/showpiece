@@ -24,7 +24,7 @@ If you are not sure, open an issue and ask. We answer quickly.
 
 ### Local setup
 
-You need Node.js 22.12 or later. To run `capture`, you also need `maestro`, `adb` and an Android emulator (see the [README](README.md#requirements)).
+You need Node.js 22.12 or later. To run `capture`, you also need `maestro`, `adb` and an Android emulator (see the [README](README.md#quickstart)).
 
 ```bash
 git clone https://github.com/MrCordeiro/showpiece.git
