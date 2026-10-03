@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { parseAllDocuments } from "yaml";
 import type { Appearance, ScreenConfig } from "../config/schema.js";
-import { VitrineError, errorInfo } from "../util/errors.js";
+import { ShowpieceError, errorInfo } from "../util/errors.js";
 import {
   collectDiagnostics,
   ensureScreenDiagnosticsDir,
@@ -44,7 +44,7 @@ function stripPngExtension(name: string): string {
 }
 
 /**
- * Enforce the vitrine convention: the flow must call `takeScreenshot` with a
+ * Enforce the showpiece convention: the flow must call `takeScreenshot` with a
  * name equal to the screen id. Throws with an actionable message otherwise.
  */
 export function assertFlowConvention(
@@ -53,14 +53,14 @@ export function assertFlowConvention(
 ): void {
   const names = extractScreenshotNames(flowText);
   if (names.length === 0) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_FLOW_CONVENTION",
       `Flow "${screen.flow}" has no takeScreenshot step. Add \`- takeScreenshot: ${screen.id}\`.`,
     );
   }
   if (!names.includes(screen.id)) {
     const found = names.join(", ");
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_FLOW_CONVENTION",
       `Flow "${screen.flow}" takes screenshot(s) named [${found}] but screen id is "${screen.id}". The takeScreenshot name must match the screen id.`,
     );
@@ -131,7 +131,7 @@ export async function runFlow(
     assertFlowConvention(flowText, screen);
 
     await mkdir(options.rawDir, { recursive: true });
-    const stagingDir = await mkdtemp(join(options.rawDir, ".vitrine-"));
+    const stagingDir = await mkdtemp(join(options.rawDir, ".showpiece-"));
 
     try {
       const summary = await collectDiagnostics({
@@ -144,7 +144,7 @@ export async function runFlow(
       exitCode = summary.exitCode;
 
       if (!summary.ok) {
-        throw new VitrineError(
+        throw new ShowpieceError(
           summary.crashed ? "E_APP_CRASHED" : "E_FLOW_FAILED",
           summary.errorMessage ??
             `maestro exited with code ${
@@ -155,7 +155,7 @@ export async function runFlow(
 
       const captured = join(stagingDir, `${screen.id}.png`);
       if (!existsSync(captured)) {
-        throw new VitrineError(
+        throw new ShowpieceError(
           "E_SCREENSHOT_MISSING",
           `Flow completed but ${screen.id}.png was not produced. ` +
             `Confirm the flow calls \`takeScreenshot: ${screen.id}\`. ` +

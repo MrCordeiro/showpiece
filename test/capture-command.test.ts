@@ -56,13 +56,13 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
       serviceAccountKeyPath: resolve(configDir, "secrets/key.json"),
       track: "listing",
     },
-    screenshotsDir: resolve(configDir, ".vitrine/screenshots"),
-    diagnosticsDir: resolve(configDir, ".vitrine/diagnostics"),
+    screenshotsDir: resolve(configDir, ".showpiece/screenshots"),
+    diagnosticsDir: resolve(configDir, ".showpiece/diagnostics"),
     appearance: "light",
     screens: [
       {
         id: "home",
-        flow: resolve(configDir, ".vitrine/flows/home.yaml"),
+        flow: resolve(configDir, ".showpiece/flows/home.yaml"),
         caption: "",
       },
     ],
@@ -99,7 +99,7 @@ describe("runCapture", () => {
     const { runFlow } = await import("../src/capture/maestro.js");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig(),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -109,7 +109,7 @@ describe("runCapture", () => {
     expect(runFlow).toHaveBeenCalledWith(
       expect.objectContaining({ id: "home" }),
       expect.objectContaining({
-        rawDir: resolve(configDir, ".vitrine/screenshots/raw"),
+        rawDir: resolve(configDir, ".showpiece/screenshots/raw"),
       }),
     );
   });
@@ -120,7 +120,7 @@ describe("runCapture", () => {
     const { runFlow } = await import("../src/capture/maestro.js");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ appearance: "dark" }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -142,7 +142,7 @@ describe("runCapture", () => {
     vi.mocked(getNightMode).mockResolvedValueOnce("custom_schedule");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ appearance: "dark" }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -167,7 +167,7 @@ describe("runCapture", () => {
     vi.mocked(runFlow).mockRejectedValueOnce(new Error("maestro exploded"));
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig(),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -186,7 +186,7 @@ describe("runCapture", () => {
     vi.mocked(enterDemoMode).mockRejectedValueOnce(new Error("no systemui"));
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig(),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
     const stderrSpy = vi
@@ -211,7 +211,7 @@ describe("runCapture", () => {
     vi.mocked(runFlow).mockRejectedValueOnce(new Error("maestro exploded"));
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ appearance: "dark" }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -230,7 +230,7 @@ describe("runCapture", () => {
       .mockRejectedValueOnce(new Error("adb: device offline")); // the restore fails
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ appearance: "dark" }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
     const stderrSpy = vi
@@ -255,7 +255,7 @@ describe("runCapture", () => {
     vi.mocked(getNightMode).mockResolvedValueOnce(undefined);
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ appearance: "dark" }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -270,7 +270,7 @@ describe("runCapture", () => {
     const { rm } = await import("node:fs/promises");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig(),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -278,11 +278,11 @@ describe("runCapture", () => {
     await runCapture({ clean: true });
 
     expect(rm).toHaveBeenCalledWith(
-      resolve(configDir, ".vitrine/screenshots/raw"),
+      resolve(configDir, ".showpiece/screenshots/raw"),
       { recursive: true, force: true },
     );
     expect(rm).toHaveBeenCalledWith(
-      resolve(configDir, ".vitrine/diagnostics"),
+      resolve(configDir, ".showpiece/diagnostics"),
       { recursive: true, force: true },
     );
   });
@@ -292,7 +292,7 @@ describe("runCapture", () => {
     const { rm } = await import("node:fs/promises");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig(),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 
@@ -306,7 +306,7 @@ describe("runCapture", () => {
     const { loadConfig } = await import("../src/config/load.js");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig(),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
     const stderrSpy = vi
@@ -327,7 +327,7 @@ describe("runCapture", () => {
     const { setNightMode } = await import("../src/capture/device.js");
     vi.mocked(loadConfig).mockResolvedValue({
       config: makeConfig({ appearance: "light" }),
-      configPath: resolve(configDir, "vitrine.config.ts"),
+      configPath: resolve(configDir, "showpiece.config.ts"),
       configDir,
     });
 

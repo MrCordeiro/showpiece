@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { execa } from "execa";
 import type { Config } from "../config/schema.js";
-import { VitrineError } from "../util/errors.js";
+import { ShowpieceError } from "../util/errors.js";
 import { assertToolInstalled, delay, run, waitFor } from "../util/exec.js";
 
 const BOOT_TIMEOUT_MS = 180_000;
@@ -62,13 +62,13 @@ export async function resolveDevice(options: {
     const match = devices.find((d) => d.serial === options.serial);
     if (!match) {
       const available = devices.map((d) => d.serial).join(", ") || "(none)";
-      throw new VitrineError(
+      throw new ShowpieceError(
         "E_DEVICE_NOT_FOUND",
         `Device "${options.serial}" not found. Connected devices: ${available}.`,
       );
     }
     if (match.state === "unauthorized") {
-      throw new VitrineError(
+      throw new ShowpieceError(
         "E_DEVICE_UNAUTHORIZED",
         `Device "${options.serial}" is unauthorized. Accept the "Allow USB debugging" prompt on the device (or revoke USB debugging authorizations and reconnect), then retry.`,
       );
@@ -96,7 +96,7 @@ export async function resolveDevice(options: {
 async function bootAvd(avd: string): Promise<string> {
   const emulatorBin = findEmulatorBinary();
   if (!emulatorBin) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_EMULATOR_BINARY_MISSING",
       "Could not locate the Android `emulator` binary. Set ANDROID_HOME (or " +
         "ANDROID_SDK_ROOT) to your SDK path, or start the emulator manually.",
@@ -132,7 +132,7 @@ async function bootAvd(avd: string): Promise<string> {
   );
 
   if (!appeared || !serial) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_EMULATOR_BOOT_TIMEOUT",
       `Timed out waiting for AVD "${avd}" to start. Check that the AVD name is correct.`,
     );
@@ -159,7 +159,7 @@ async function waitForBoot(serial: string): Promise<void> {
   );
 
   if (!booted) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_DEVICE_BOOT_TIMEOUT",
       `Timed out waiting for device "${serial}" to finish booting.`,
     );
@@ -220,7 +220,7 @@ export async function ensureApp(
 ): Promise<void> {
   if (app.apkPath) {
     if (!existsSync(app.apkPath)) {
-      throw new VitrineError(
+      throw new ShowpieceError(
         "E_APK_NOT_FOUND",
         `APK not found at ${app.apkPath}.`,
       );
@@ -239,7 +239,7 @@ export async function ensureApp(
     .some((line) => line.trim() === `package:${app.packageName}`);
 
   if (!installed) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_APP_NOT_INSTALLED",
       `Package "${app.packageName}" is not installed on ${serial}. Install your dev client / APK first, or set app.apkPath in the config.`,
     );
@@ -282,7 +282,7 @@ export async function overrideMetroHost(
   port: number,
 ): Promise<void> {
   if (!PACKAGE_NAME_RE.test(packageName)) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_INVALID_PACKAGE_NAME",
       `Invalid app.packageName "${packageName}" — expected an Android package name (letters, digits, "_", "." only).`,
     );
@@ -331,7 +331,7 @@ export async function assertMetroRunning(port: number): Promise<void> {
   try {
     res = await fetch(url, { signal: controller.signal });
   } catch {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_METRO_UNREACHABLE",
       `Metro dev server is not reachable at ${url}. Dev builds load their JS bundle from Metro — start it with \`npx expo start\` and keep it running, then re-run capture. For a standalone release/preview APK that embeds the bundle, set device.devServer to false.`,
     );
@@ -340,7 +340,7 @@ export async function assertMetroRunning(port: number): Promise<void> {
   }
 
   if (!res.ok) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_METRO_UNEXPECTED_RESPONSE",
       `Got HTTP ${res.status} from ${url}, which doesn't look like Metro — is another process using port ${port}? Stop it (or set device.metroPort), then re-run capture.`,
     );
@@ -348,7 +348,7 @@ export async function assertMetroRunning(port: number): Promise<void> {
 
   const body = await res.text();
   if (!body.includes("packager-status:running")) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_METRO_NOT_READY",
       `Metro responded at ${url} but is not ready (expected "packager-status:running"). Wait for \`npx expo start\` to finish booting, then re-run capture.`,
     );
@@ -395,7 +395,7 @@ export async function setNightMode(
   try {
     await run("adb", ["-s", serial, "shell", "cmd", "uimode", "night", mode]);
   } catch (error) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_NIGHT_MODE_UNSUPPORTED",
       `Failed to set night mode "${mode}" on ${serial}. \`cmd uimode night\` requires Android 10 (API 29) or newer — check the AVD's system image. Original error: ${
         error instanceof Error ? error.message : String(error)

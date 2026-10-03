@@ -84,7 +84,7 @@ interface FontFiles {
 
 /** configSchema's `frame.font` enum must list exactly these keys. */
 const FONTS: Record<string, FontFiles> = {
-  // Metropolis Medium at -0.05em matches the approved headline design (SPEC.md, "polished frame").
+  // Metropolis Medium at -0.05em matches the approved headline design.
   Metropolis: {
     headline: "Metropolis-Medium.woff2",
     body: "Metropolis-Regular.woff2",

@@ -3,14 +3,14 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { createJiti } from "jiti";
 import type { z } from "zod";
-import { VitrineError } from "../util/errors.js";
+import { ShowpieceError } from "../util/errors.js";
 import { type Config, configSchema } from "./schema.js";
 
 const DEFAULT_BASENAMES = [
-  "vitrine.config.ts",
-  "vitrine.config.js",
-  "vitrine.config.mjs",
-  "vitrine.config.json",
+  "showpiece.config.ts",
+  "showpiece.config.js",
+  "showpiece.config.mjs",
+  "showpiece.config.json",
 ];
 
 export interface LoadedConfig {
@@ -22,7 +22,7 @@ export interface LoadedConfig {
 }
 
 /**
- * Locate, load, and validate a vitrine config.
+ * Locate, load, and validate a showpiece config.
  *
  * @param explicitPath  value of `--config`, if provided.
  * @param cwd           directory to search when no explicit path is given.
@@ -36,7 +36,7 @@ export async function loadConfig(
 
   const parsed = configSchema.safeParse(raw);
   if (!parsed.success) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_CONFIG_INVALID",
       formatConfigError(parsed.error, configPath),
     );
@@ -59,7 +59,7 @@ function resolveConfigPath(
       ? explicitPath
       : resolve(cwd, explicitPath);
     if (!existsSync(abs)) {
-      throw new VitrineError(
+      throw new ShowpieceError(
         "E_CONFIG_NOT_FOUND",
         `Config file not found: ${abs}`,
       );
@@ -72,7 +72,7 @@ function resolveConfigPath(
     if (existsSync(candidate)) return candidate;
   }
 
-  throw new VitrineError(
+  throw new ShowpieceError(
     "E_CONFIG_NOT_FOUND",
     `No config file found in ${cwd}. Expected one of: ${DEFAULT_BASENAMES.join(
       ", ",

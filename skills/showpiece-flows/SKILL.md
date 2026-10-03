@@ -1,13 +1,13 @@
 ---
-name: vitrine-flows
-description: Use when `vitrine capture` fails or a Maestro flow under .vitrine/flows/ needs fixing — reads vitrine's diagnostics output to find the failing step and repairs the flow or vitrine.config.ts.
+name: showpiece-flows
+description: Use when `showpiece capture` fails or a Maestro flow under .showpiece/flows/ needs fixing — reads showpiece's diagnostics output to find the failing step and repairs the flow or showpiece.config.ts.
 ---
 
-# vitrine-flows
+# showpiece-flows
 
-You're fixing a failed `vitrine capture` run in an app repo that consumes
-`vitrine` as a dev dependency. **Edit this repo's `vitrine.config.ts` and
-`.vitrine/flows/*.yaml` only — never vitrine's own source.** Treat vitrine
+You're fixing a failed `showpiece capture` run in an app repo that consumes
+`showpiece` as a dev dependency. **Edit this repo's `showpiece.config.ts` and
+`.showpiece/flows/*.yaml` only — never showpiece's own source.** Treat showpiece
 itself as fixed and work within it.
 
 ## Conventions
@@ -16,12 +16,12 @@ itself as fixed and work within it.
   `takeScreenshot` once. `assertVisible`/`extendedWaitUntil` are readiness
   gates, not the point of the flow — this isn't a test suite.
 - **`takeScreenshot` name must equal the screen's `id`** in
-  `vitrine.config.ts`. Mismatch → `E_FLOW_CONVENTION` before Maestro runs.
+  `showpiece.config.ts`. Mismatch → `E_FLOW_CONVENTION` before Maestro runs.
 - Dark mode suffixes everything with `-dark`: `raw/<id>-dark.png`,
-  `.vitrine/diagnostics/<id>-dark/`. Both appearances coexist.
-- `vitrine.config.ts`, not the filesystem, decides which flows run. A flow
+  `.showpiece/diagnostics/<id>-dark/`. Both appearances coexist.
+- `showpiece.config.ts`, not the filesystem, decides which flows run. A flow
   file does nothing until it's referenced in `screens[]`.
-- `vitrine frame` shows only the top ~70% of each screenshot: the device
+- `showpiece frame` shows only the top ~70% of each screenshot: the device
   continues below the canvas edge. End the flow on a state where the
   important content is in the top two-thirds of the screen. Content behind a
   bottom navigation bar or at the end of a list is not visible.
@@ -29,16 +29,16 @@ itself as fixed and work within it.
   `clearState`, no live timestamps). Different content each run is a flow
   bug even when capture "succeeds."
 
-## Start here: `.vitrine/diagnostics/`
+## Start here: `.showpiece/diagnostics/`
 
 Every attempted screen — success or failure — gets a directory. Read
 `last-run.json` first, then drill into the failing screen:
 
 ```
-.vitrine/diagnostics/
+.showpiece/diagnostics/
   last-run.json              start here: per-screen status + code + path
   <id>/
-    context.json              vitrine's record: flow, serial, exitCode,
+    context.json              showpiece's record: flow, serial, exitCode,
                                status, error, timestamp
     commands.json              Maestro's per-step log — sort by
                                metadata.sequenceNumber (array order ≠
@@ -69,7 +69,7 @@ Every attempted screen — success or failure — gets a directory. Read
   "screens": [
     { "id": "home", "status": "failed", "code": "E_FLOW_FAILED",
       "error": "Step failed: assertVisible: Home after 10.0s (FAILED). ...",
-      "diagnosticsDir": ".vitrine/diagnostics/home" }
+      "diagnosticsDir": ".showpiece/diagnostics/home" }
   ],
   "summary": { "total": 2, "captured": 1, "failed": 1 }
 }
@@ -94,14 +94,14 @@ only for selector-level detail.
 | `E_DEVICE_NOT_FOUND` / `E_DEVICE_UNAUTHORIZED` | `--serial` device not connected/authorized | Reconnect/authorize — not a flow bug |
 | `E_EMULATOR_BOOT_TIMEOUT` / `E_DEVICE_BOOT_TIMEOUT` | AVD didn't finish booting | Re-run; check `device.avd` |
 | `E_INVALID_PACKAGE_NAME` | `app.packageName` malformed | Fix the config value |
-| `E_CONFIG_INVALID` / `E_CONFIG_NOT_FOUND` | `vitrine.config.ts` broken | Fix the config — not a flow bug |
-| `E_UNKNOWN` | Not a vitrine error — read the message as-is | The message is the only evidence |
+| `E_CONFIG_INVALID` / `E_CONFIG_NOT_FOUND` | `showpiece.config.ts` broken | Fix the config — not a flow bug |
+| `E_UNKNOWN` | Not a showpiece error — read the message as-is | The message is the only evidence |
 
 ## App crashed, not the flow
 
 A stalled bundle fetch and a crashed app look identical to Maestro: an
 assertion that never comes true. `commands.json` can't tell them apart —
-vitrine checks whether the app's process is still alive after a failure so
+showpiece checks whether the app's process is still alive after a failure so
 you're not editing a selector that was never the problem.
 `code: "E_APP_CRASHED"` → the flow is probably fine; go to
 `crash-signals.log`.
@@ -124,7 +124,7 @@ real selector bug) on an app using native packages
 X@package.json` when there's drift, and an abort message often names the
 built-against version directly. Fix: rebuild the native app
 (`npx expo prebuild -p android && npx expo run:android`), not the flow —
-vitrine never rebuilds the app itself.
+showpiece never rebuilds the app itself.
 
 ## Reaching known-good state, regardless of device state
 
@@ -174,7 +174,7 @@ Five pitfalls this pattern runs into:
    `launchApp`, nothing may be rendered yet, especially on a fresh install
    (first-launch-after-install is measurably slower than warm). Precede a
    `when:`-gated branch with an `extendedWaitUntil` on an alternation of
-   every state you might land on (`"A|B|C"`), so the branch decision waits
+   every state the app can show (`"A|B|C"`), so the branch decision waits
    for *something* real to render first. Make it generous (60–120s); it
    only costs time when needed, since `extendedWaitUntil` returns as soon
    as its condition is true.
@@ -205,14 +205,14 @@ Five pitfalls this pattern runs into:
 ## The fast loop
 
 ```bash
-npx vitrine capture --only <id>
+npx showpiece capture --only <id>
 ```
 
 Safe to repeat — only touches that screen's `raw/` and diagnostics output.
 
 ## When Maestro's own tools are the better fit
 
-vitrine's diagnostics are **post-mortem evidence of a run that already
+showpiece's diagnostics are **post-mortem evidence of a run that already
 ended**. For live device interaction while authoring a fix, use Maestro
 directly:
 
@@ -222,8 +222,8 @@ directly:
 
 ## After fixing a flow
 
-1. `npx vitrine capture --only <id>` — confirm it captures cleanly.
-2. Re-run the full `npx vitrine capture` once — a shared-setup fix can
+1. `npx showpiece capture --only <id>` — confirm it captures cleanly.
+2. Re-run the full `npx showpiece capture` once — a shared-setup fix can
    affect other screens.
-3. Never hand-edit `.vitrine/diagnostics/` or `.vitrine/screenshots/` —
+3. Never hand-edit `.showpiece/diagnostics/` or `.showpiece/screenshots/` —
    both are generated output, overwritten every run.

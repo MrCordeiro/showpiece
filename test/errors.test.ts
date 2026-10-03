@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  ShowpieceError,
   UNKNOWN_ERROR_CODE,
-  VitrineError,
   errorInfo,
 } from "../src/util/errors.js";
 
-describe("VitrineError", () => {
+describe("ShowpieceError", () => {
   it("carries a code alongside the message", () => {
-    const error = new VitrineError("E_TOOL_MISSING", "maestro not found");
+    const error = new ShowpieceError("E_TOOL_MISSING", "maestro not found");
     expect(error.code).toBe("E_TOOL_MISSING");
     expect(error.message).toBe("maestro not found");
     expect(error).toBeInstanceOf(Error);
@@ -15,7 +15,7 @@ describe("VitrineError", () => {
 
   it("chains a cause when provided", () => {
     const cause = new Error("root cause");
-    const error = new VitrineError("E_NIGHT_MODE_UNSUPPORTED", "failed", {
+    const error = new ShowpieceError("E_NIGHT_MODE_UNSUPPORTED", "failed", {
       cause,
     });
     expect(error.cause).toBe(cause);
@@ -23,8 +23,8 @@ describe("VitrineError", () => {
 });
 
 describe("errorInfo", () => {
-  it("reads the code off a VitrineError", () => {
-    const error = new VitrineError("E_CONFIG_INVALID", "bad config");
+  it("reads the code off a ShowpieceError", () => {
+    const error = new ShowpieceError("E_CONFIG_INVALID", "bad config");
     expect(errorInfo(error)).toEqual({
       code: "E_CONFIG_INVALID",
       message: "bad config",

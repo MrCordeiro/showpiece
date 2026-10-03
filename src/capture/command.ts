@@ -2,7 +2,7 @@ import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { loadConfig } from "../config/load.js";
 import type { Appearance, Config, ScreenConfig } from "../config/schema.js";
-import { VitrineError, errorInfo } from "../util/errors.js";
+import { ShowpieceError, errorInfo } from "../util/errors.js";
 import { assertToolInstalled } from "../util/exec.js";
 import {
   type StepResult,
@@ -52,7 +52,7 @@ export function selectScreens(
   const known = new Set(screens.map((s) => s.id));
   const unknown = wanted.filter((id) => !known.has(id));
   if (unknown.length > 0) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_UNKNOWN_SCREEN_ID",
       `Unknown screen id(s) in --only: ${unknown.join(", ")}. ` +
         `Known ids: ${[...known].join(", ")}.`,
@@ -75,7 +75,7 @@ export function resolveAppearance(
   if (flag === undefined) return configured;
   const match = APPEARANCES.find((value) => value === flag);
   if (!match) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_INVALID_APPEARANCE",
       `Invalid --appearance "${flag}". Expected one of: ${APPEARANCES.join(
         ", ",

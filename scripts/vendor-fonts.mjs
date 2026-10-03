@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// One-off vendoring step: copies the static weights vitrine needs out of
+// One-off vendoring step: copies the static weights showpiece needs out of
 // @fontsource/inter (SIL OFL 1.1) and @fontsource/metropolis (Unlicense) into
 // assets/fonts/, where font.ts loads them from at runtime. Re-run after
 // bumping either package to refresh.

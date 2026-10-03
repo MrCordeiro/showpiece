@@ -109,9 +109,9 @@ describe("parseProcessList", () => {
   it("finds a package that's running", () => {
     const stdout = [
       "USER  PID  PPID  ... NAME",
-      "u0_a174 2073 307 13908024 215924 0 0 S com.pluckd.cashzilla.dev",
+      "u0_a174 2073 307 13908024 215924 0 0 S com.example.app",
     ].join("\n");
-    expect(parseProcessList(stdout, "com.pluckd.cashzilla.dev")).toBe(true);
+    expect(parseProcessList(stdout, "com.example.app")).toBe(true);
   });
 
   it("returns false when the package isn't in the process list", () => {

@@ -1,5 +1,5 @@
 import { type Options, execa } from "execa";
-import { VitrineError } from "./errors.js";
+import { ShowpieceError } from "./errors.js";
 
 export interface RunResult {
   stdout: string;
@@ -35,7 +35,7 @@ export async function assertToolInstalled(
   args?: string[],
 ): Promise<void> {
   if (!(await isToolInstalled(command, args))) {
-    throw new VitrineError(
+    throw new ShowpieceError(
       "E_TOOL_MISSING",
       `Required tool "${command}" was not found on PATH.\n  ${hint}`,
     );

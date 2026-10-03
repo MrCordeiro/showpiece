@@ -55,7 +55,7 @@ export interface ScreenContext extends RunContext {
 }
 
 /**
- * Write `context.json` — vitrine's own view of the attempt, independent of
+ * Write `context.json` — showpiece's own view of the attempt, independent of
  * whatever Maestro artifacts did or didn't make it to disk. If a screen appears
  * in `last-run.json`, its diagnostics directory exists and contains at least
  * this file.
@@ -122,7 +122,7 @@ async function runMaestroFlow(
  * leave the launcher on screen instead); it's the selector-authoring
  * evidence, while `failure-screenshot.png` (from Maestro itself) is the
  * pixel evidence of the failing step. Maestro's own debug output does not
- * include this, so vitrine dumps it separately. Best-effort: never let a
+ * include this, so showpiece dumps it separately. Best-effort: never let a
  * hierarchy failure mask the real capture error.
  */
 export async function dumpHierarchy(
@@ -304,7 +304,7 @@ const SUMMARY_KEYS = [
  * command's payload. The only successful-run dump seen before this stage
  * (`launchAppCommand`, `applyConfigurationCommand`) nests one level (e.g.
  * `{ config: { appId } }`); a real assertion failure nests further still
- * (`{ condition: { visible: { textRegex } } }`, confirmed against cashzilla)
+ * (`{ condition: { visible: { textRegex } } }`, confirmed against a real app)
  * — search a few levels deep rather than assuming a flat shape.
  */
 function summarizeValue(value: unknown, depth = 3): string | undefined {

@@ -1,7 +1,7 @@
 ---
 name: writing-tests
 description: >
-  Gates whether a new Vitest test in vitrine should exist and forces it to be cheap, so the suite stays fast and trustworthy.
+  Gates whether a new Vitest test in showpiece should exist and forces it to be cheap, so the suite stays fast and trustworthy.
   Use before adding or substantially changing any test in this repo - a new feature, a bugfix, or a PR. Front-loads the value bar and the efficiency bar.
   Includes a "don't write it" list.
 ---
@@ -10,7 +10,7 @@ description: >
 
 Run this before writing tests. It carries the decision procedure.
 
-vitrine uses Vitest. Tests are in `test/`, one `<area>-<unit>.test.ts` file per unit (for example `test/frame-manifest.test.ts`, `test/publish-command.test.ts`). Fixtures are in `test/fixtures/`.
+showpiece uses Vitest. Tests are in `test/`, one `<area>-<unit>.test.ts` file per unit (for example `test/frame-manifest.test.ts`, `test/publish-command.test.ts`). Fixtures are in `test/fixtures/`.
 
 ## The gate: two questions
 

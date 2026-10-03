@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest a change or a new feature.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Check the [roadmap issues](https://github.com/MrCordeiro/showpiece/labels/roadmap) first. If your idea is there, comment on that issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and why is it difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: What do you do today instead?
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should showpiece do?

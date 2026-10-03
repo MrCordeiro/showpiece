@@ -29,8 +29,8 @@ describe("configSchema", () => {
     expect(parsed.frame.font).toBe("Metropolis");
     expect(parsed.publish.track).toBe("listing");
     expect(parsed.screens[0]?.caption).toBe("");
-    expect(parsed.screenshotsDir).toBe(".vitrine/screenshots");
-    expect(parsed.diagnosticsDir).toBe(".vitrine/diagnostics");
+    expect(parsed.screenshotsDir).toBe(".showpiece/screenshots");
+    expect(parsed.diagnosticsDir).toBe(".showpiece/diagnostics");
     expect(parsed.appearance).toBe("light");
   });
 
@@ -176,10 +176,14 @@ describe("loadConfig", () => {
     expect(isAbsolute(config.publish.serviceAccountKeyPath)).toBe(true);
     expect(configPath).toBe(join(fixtures, "valid.config.json"));
 
-    // screenshotsDir/diagnosticsDir default to a namespace under .vitrine and
+    // screenshotsDir/diagnosticsDir default to a namespace under .showpiece and
     // resolve against the config file's directory, not process.cwd().
-    expect(config.screenshotsDir).toBe(join(fixtures, ".vitrine/screenshots"));
-    expect(config.diagnosticsDir).toBe(join(fixtures, ".vitrine/diagnostics"));
+    expect(config.screenshotsDir).toBe(
+      join(fixtures, ".showpiece/screenshots"),
+    );
+    expect(config.diagnosticsDir).toBe(
+      join(fixtures, ".showpiece/diagnostics"),
+    );
   });
 
   it("resolves an overridden screenshotsDir against configDir, not cwd", async () => {
@@ -188,10 +192,10 @@ describe("loadConfig", () => {
     try {
       const { config } = await loadConfig(join(fixtures, "valid.config.json"));
       expect(config.screenshotsDir).not.toBe(
-        resolve(cwdBefore, ".vitrine/screenshots"),
+        resolve(cwdBefore, ".showpiece/screenshots"),
       );
       expect(config.screenshotsDir).toBe(
-        join(fixtures, ".vitrine/screenshots"),
+        join(fixtures, ".showpiece/screenshots"),
       );
     } finally {
       process.chdir(cwdBefore);
@@ -248,8 +252,8 @@ describe("publish.listing", () => {
   });
 
   it("is not resolved to absolute paths by loadConfig", async () => {
-    const dir = makeTempDir("vitrine-listing-");
-    const configPath = join(dir, "vitrine.config.json");
+    const dir = makeTempDir("showpiece-listing-");
+    const configPath = join(dir, "showpiece.config.json");
     writeFileSync(
       configPath,
       JSON.stringify({

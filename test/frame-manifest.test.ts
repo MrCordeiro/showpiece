@@ -113,13 +113,13 @@ describe("readManifest", () => {
     ["the schema version is unknown", '{"schemaVersion":2,"images":{}}'],
     ["images is an array", '{"schemaVersion":1,"images":[]}'],
   ])("returns an empty manifest when %s", async (_case, content) => {
-    const dir = makeTempDir("vitrine-manifest-");
+    const dir = makeTempDir("showpiece-manifest-");
     if (content !== undefined) writeFileSync(join(dir, MANIFEST_FILE), content);
     expect(await readManifest(dir)).toEqual(empty);
   });
 
   it("reads back what writeManifest wrote", async () => {
-    const dir = makeTempDir("vitrine-manifest-");
+    const dir = makeTempDir("showpiece-manifest-");
     const manifest = {
       schemaVersion: 1 as const,
       images: { home: { inputHash: "a", outputHash: "b" } },

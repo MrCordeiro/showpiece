@@ -50,7 +50,7 @@ export function sha256(data: Buffer | string): string {
 
 /**
  * The array gives a fixed field order, so equal inputs always give an equal
- * hash. The vitrine version is included because a vitrine upgrade can change
+ * hash. The showpiece version is included because a showpiece upgrade can change
  * the pixels that `frame` renders.
  */
 export function inputHash(raw: Buffer, inputs: FrameInputs): string {
