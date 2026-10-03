@@ -32,6 +32,17 @@ describe("maybeShowInvite", () => {
   });
 
   it.each([
+    [{}, true],
+    [{ NO_COLOR: "1" }, false],
+  ])("uses colour codes only without NO_COLOR (%o)", async (env, coloured) => {
+    const { options, lines } = setup({ env });
+
+    await maybeShowInvite(options);
+
+    expect(lines[0].includes("\x1b[")).toBe(coloured);
+  });
+
+  it.each([
     ["CI is set", { env: { CI: "true" } }],
     ["SHOWPIECE_NO_INVITE=1", { env: { SHOWPIECE_NO_INVITE: "1" } }],
     ["stdout is not a TTY", { isTTY: false }],

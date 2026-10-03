@@ -3,9 +3,8 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 // An empty link turns the invite off.
-export const INVITE_URL = "";
-export const INVITE_TEXT =
-  "Building showpiece alone. Would you talk to me for 20 min about how you make store screenshots?";
+export const INVITE_URL =
+  "https://cal.com/fernando-cordeiro/how-you-make-store-screenshots-showpiece";
 
 export interface InviteOptions {
   env?: NodeJS.ProcessEnv;
@@ -52,8 +51,25 @@ export async function maybeShowInvite(
   }
 
   const write = options.write ?? ((line: string) => process.stdout.write(line));
-  write(`\n${INVITE_TEXT} ${url}\n`);
+  write(formatInvite(url, !env.NO_COLOR));
   return true;
+}
+
+// See https://no-color.org: any non-empty NO_COLOR value turns colour off.
+function formatInvite(url: string, colour: boolean): string {
+  const style = (code: string, text: string) =>
+    colour ? `\x1b[${code}m${text}\x1b[0m` : text;
+  return [
+    "",
+    `  ${style("1;31", "♥ Thank you for trying showpiece!")} ٩(ˊᗜˋ*)و`,
+    "",
+    `  ${style("1", "Want to help shape the roadmap?")}`,
+    "  Tell me how you make store screenshots, in a 15-min call:",
+    `  → ${style("4;36", url)}`,
+    "",
+    `  ${style("2", "You see this note once. SHOWPIECE_NO_INVITE=1 turns it off.")}`,
+    "",
+  ].join("\n");
 }
 
 async function readState(path: string): Promise<Record<string, unknown>> {

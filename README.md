@@ -1,18 +1,38 @@
-# showpiece
+<h1 align="center">showpiece</h1>
 
-[![CI](https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml/badge.svg)](https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/showpiece)](https://www.npmjs.com/package/showpiece)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+<p align="center">
+  <strong>Your app changed. Your Play Store screenshots did not.</strong><br/>
+  One command captures, frames and publishes them. 📸
+</p>
 
-Make your Google Play screenshots with one command: showpiece captures your Android app with [Maestro](https://maestro.mobile.dev), frames the screenshots, and publishes them to your store listing.
+<p align="center">
+  <a href="https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml"><img src="https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+  <a href="https://www.npmjs.com/package/showpiece"><img src="https://img.shields.io/npm/v/showpiece" alt="npm"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"/></a>
+</p>
 
 ![A raw screenshot of an app next to the same screenshot after showpiece frame: a caption above a stylized phone on a dark background](docs/images/before-after.png)
 
 <!-- TODO: demo GIF of capture → frame → publish --dry-run -->
 
-- **No production build.** It captures any installed build: a Metro debug build, an Expo dev client or an old APK.
-- **No design tool.** Three templates make store-ready 1080×1920 images with your captions.
-- **No Play Console upload.** It replaces the listing screenshots with the Play Developer API, and `--dry-run` checks everything without a change.
+|    | showpiece |
+| -- | --------- |
+| 📱 | **Works with the build you have.** A debug build, an Expo dev client or last month's APK. No 30-minute production build. |
+| 🖼️ | **Frames them for you.** A caption, a phone and your colours. No Figma file to keep up to date. |
+| 🚀 | **Publishes to Google Play.** It replaces the listing screenshots. `--dry-run` checks everything and changes nothing. |
+| 🎯 | **Same pixels every time.** Your laptop and CI make byte-identical images. |
+| 🩺 | **Tells you why a flow failed.** Diagnostics for each screen, and an agent skill that reads them and repairs the flow. |
+| 🛡️ | **Never cancels a review.** Your pending release stays pending. |
+
+## Why showpiece?
+
+Every release had the same job at the end: open the emulator, go to each screen, take a screenshot, put it in a design tool, export it, and upload it in Play Console. Then the app changed again, and the screenshots were wrong again.
+
+The usual tools need a production build, a design tool, or fastlane and Ruby. My production build takes 30 minutes. I wanted a tool that uses the build that is already on the emulator.
+
+So showpiece uses [Maestro](https://maestro.mobile.dev) to go to each screen, [sharp](https://sharp.pixelplumbing.com) to frame the screenshots, and the Play Developer API to publish them. One config file says which screens you want and what each caption says.
+
+If you change your screenshots once a year, the Play Console upload is fine. showpiece is for apps that change every sprint.
 
 ## How it works
 
@@ -484,11 +504,18 @@ When `showpiece capture` fails, read node_modules/showpiece/skills/showpiece-flo
 
 This path always refers to the installed version, so the agent gets the new skill when you upgrade showpiece.
 
-<!-- TODO: "Talk to the maintainer" section (booking link + Discussions). Write the copy with the maintainer. -->
+## Help shape showpiece
 
-### The interview invitation
+Thank you for being here! ٩(ˊᗜˋ*)و
 
-After the first successful `frame` or `publish` on a machine, showpiece prints one line that invites you to talk with the maintainer. It prints the line once per machine and sends no data. It records that it showed the line in `$XDG_CONFIG_HOME/showpiece/state.json` (or `~/.config/showpiece/state.json`).
+showpiece is young, and what I build next depends on how you make store screenshots today. Maybe you use showpiece every week, maybe you tried it once, or maybe you are only curious. I want to hear from you either way.
+
+- **A 15-min call:** [book a time](https://cal.com/fernando-cordeiro/how-you-make-store-screenshots-showpiece). These calls decide the roadmap. As thanks, I email you a one-page summary of what I learn: how other teams make their store screenshots, and what I build next.
+- **No time for a call?** Tell me in [Discussions](https://github.com/MrCordeiro/showpiece/discussions).
+
+### The invitation in the CLI
+
+After the first successful `frame` or `publish` on a machine, showpiece prints one line with the link to the call. It prints the line once per machine and sends no data. It records that it showed the line in `$XDG_CONFIG_HOME/showpiece/state.json` (or `~/.config/showpiece/state.json`).
 
 showpiece does not print the line when `CI` is set or when the output is not a terminal. To turn it off, set `SHOWPIECE_NO_INVITE=1`.
 
