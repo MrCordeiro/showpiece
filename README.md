@@ -5,11 +5,12 @@
   Capture, frame and publish them from the terminal, with one config file. 📸
 </p>
 
-<p align="center">
-  <a href="https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml"><img src="https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
-  <a href="https://www.npmjs.com/package/showpiece"><img src="https://img.shields.io/npm/v/showpiece" alt="npm"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"/></a>
-</p>
+<div align="center">
+[![CI](https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml/badge.svg)](https://github.com/MrCordeiro/showpiece/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/showpiece)](https://www.npmjs.com/package/showpiece)
+[![codecov](https://codecov.io/github/MrCordeiro/showpiece/graph/badge.svg?token=C7XCKA49FF)](https://codecov.io/github/MrCordeiro/showpiece)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+</div>
 
 ![A raw screenshot of an app next to the same screenshot after showpiece frame: a caption above a stylized phone on a dark background](docs/images/before-after.png)
 

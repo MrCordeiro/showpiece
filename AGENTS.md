@@ -106,7 +106,7 @@ A breaking change to any of these needs a major version. A new feature needs a m
 
 When a change breaks the public API, say so in the commit message and in the PR description.
 
-Only the maintainer makes releases:
+Only maintainers can make releases:
 
 1. In a PR, run `npm version <major|minor|patch> --no-git-tag-version`. This changes the version in `package.json` and `package-lock.json` only. Merge the PR.
 2. On GitHub, create a release from `main` with a new tag `v<version>`, for example `v0.2.0`. The tag must equal the version in `package.json`. "Generate release notes" drafts the notes from the merged PRs. The release notes are the changelog.

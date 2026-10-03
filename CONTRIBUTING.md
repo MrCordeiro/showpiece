@@ -48,7 +48,7 @@ npx showpiece --help
 ### Pull requests
 
 1. Create a branch from `main`.
-2. Add or update tests for the behaviour that you change.
+2. Add or update tests for any behavior that you change.
 3. Run the checks that CI runs:
 
    ```bash

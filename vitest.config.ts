@@ -9,5 +9,10 @@ export default defineConfig({
     env: { SHOWPIECE_NO_INVITE: "1" },
     // Tests that run `runFrame` load sharp and fonts cold in parallel workers.
     testTimeout: 20_000,
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.ts"],
+      reporter: ["text", "lcov"],
+    },
   },
 });
