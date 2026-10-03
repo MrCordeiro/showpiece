@@ -108,10 +108,9 @@ When a change breaks the public API, say so in the commit message and in the PR 
 
 Only the maintainer makes releases:
 
-1. Run `npm version <major|minor|patch>`. This changes `package.json` and creates a commit and a `v*` tag.
-2. Push the commit and the tag: `git push --follow-tags`.
-3. The release workflow (`.github/workflows/release.yml`) runs the checks and publishes the package to npm with provenance.
-4. Write the GitHub release notes for the tag. The release notes are the changelog.
+1. In a PR, run `npm version <major|minor|patch> --no-git-tag-version`. This changes the version in `package.json` and `package-lock.json` only. Merge the PR.
+2. On GitHub, create a release from `main` with a new tag `v<version>`, for example `v0.2.0`. The tag must equal the version in `package.json`. "Generate release notes" drafts the notes from the merged PRs. The release notes are the changelog.
+3. Publish the release. The release workflow (`.github/workflows/release.yml`) runs the checks, compares the tag with `package.json`, and publishes the package to npm with provenance.
 
 ## Writing style
 
