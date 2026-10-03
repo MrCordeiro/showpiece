@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../src/config/schema.js";
+import { INVITE_MARK, enableInvite } from "./invite-env.js";
 import { makeTempDir } from "./temp-dir.js";
 
 vi.mock("../src/config/load.js", () => ({ loadConfig: vi.fn() }));
@@ -144,6 +145,36 @@ describe("runFrame", () => {
       false,
     );
     expect(output).toContain("showpiece capture");
+  });
+
+  it.each([
+    ["a successful run", true],
+    ["a failed run", false],
+  ])("shows the interview invite only after %s", async (_, hasRaw) => {
+    const { loadConfig } = await import("../src/config/load.js");
+    if (hasRaw) await writeSampleRaw(join(screenshotsDir, "raw", "home.png"));
+    vi.mocked(loadConfig).mockResolvedValue({
+      config: makeConfig({ screenshotsDir }),
+      configPath: resolve(configDir, "showpiece.config.ts"),
+      configDir,
+    });
+    const invite = enableInvite();
+    const writeSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+
+    let output = "";
+    try {
+      const { runFrame } = await import("../src/frame/command.js");
+      await runFrame({});
+      output = writeSpy.mock.calls.map((call) => String(call[0])).join("");
+    } finally {
+      writeSpy.mockRestore();
+      invite.restore();
+    }
+
+    expect(output.includes(INVITE_MARK)).toBe(hasRaw);
+    expect(existsSync(invite.stateFile)).toBe(hasRaw);
   });
 
   it("sizes text over every configured screen, including ones --only skips", async () => {

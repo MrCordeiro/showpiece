@@ -68,13 +68,35 @@ describe("maybeShowInvite", () => {
     expect(lines).toEqual([]);
   });
 
-  it("does not throw on a corrupt state file", async () => {
-    const { options } = setup();
+  it("shows the invite once when two runs start together", async () => {
+    const { options, lines } = setup();
+
+    const shown = await Promise.all([
+      maybeShowInvite(options),
+      maybeShowInvite(options),
+    ]);
+
+    expect(shown.filter(Boolean)).toHaveLength(1);
+    expect(lines).toHaveLength(1);
+  });
+
+  it("treats any existing state file as shown, also a corrupt one", async () => {
+    const { options, lines } = setup();
     mkdirSync(join(options.statePath, ".."), { recursive: true });
     writeFileSync(options.statePath, "{not json");
 
-    expect(await maybeShowInvite(options)).toBe(true);
     expect(await maybeShowInvite(options)).toBe(false);
+    expect(lines).toEqual([]);
+  });
+
+  it("does not fail the command when the output cannot be written", async () => {
+    const { options } = setup({
+      write: () => {
+        throw new Error("EPIPE");
+      },
+    });
+
+    await expect(maybeShowInvite(options)).resolves.toBe(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import sharp from "sharp";
 import {
@@ -13,6 +13,7 @@ import {
 import type { Config } from "../src/config/schema.js";
 import type { PlayClient } from "../src/publish/play.js";
 import { ShowpieceError } from "../src/util/errors.js";
+import { INVITE_MARK, enableInvite } from "./invite-env.js";
 import { makeTempDir } from "./temp-dir.js";
 
 vi.mock("../src/config/load.js", () => ({ loadConfig: vi.fn() }));
@@ -199,6 +200,34 @@ describe("runPublish", () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(output).toContain("replace the 3 current screenshots");
   });
+
+  it.each([
+    ["a dry run", { dryRun: true }, false, true],
+    ["a commit", { yes: true }, false, true],
+    ["a declined run", {}, true, false],
+  ])(
+    "shows the interview invite only after %s",
+    async (_, options, interactive, shown) => {
+      await useConfig(makeConfig());
+      writeKey();
+      const fake = fakeClient();
+      const { runPublish } = await import("../src/publish/command.js");
+      const invite = enableInvite();
+
+      try {
+        await runPublish(options, {
+          createClient: fake.createClient,
+          confirm: async () => false,
+          isInteractive: interactive,
+        });
+      } finally {
+        invite.restore();
+      }
+
+      expect(output.includes(INVITE_MARK)).toBe(shown);
+      expect(existsSync(invite.stateFile)).toBe(shown);
+    },
+  );
 
   it("makes no API call when the user declines", async () => {
     await useConfig(makeConfig());

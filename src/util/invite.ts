@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -37,20 +37,22 @@ export async function maybeShowInvite(
 
   const statePath = options.statePath ?? inviteStatePath(env);
   try {
-    const state = await readState(statePath);
-    if (state.inviteShown) return false;
-    // Record before printing, so an unwritable state file cannot show the invite on every run.
     await mkdir(dirname(statePath), { recursive: true });
+    // "wx" fails when the file exists, so only one run can create it, also
+    // when two commands start together. The file is created before the note
+    // is printed, so an unwritable state file cannot show the note on every run.
     await writeFile(
       statePath,
-      `${JSON.stringify({ ...state, inviteShown: new Date().toISOString() }, null, 2)}\n`,
+      `${JSON.stringify({ inviteShown: new Date().toISOString() }, null, 2)}
+`,
+      { flag: "wx" },
     );
+    const write =
+      options.write ?? ((text: string) => process.stdout.write(text));
+    write(formatInvite(url, !env.NO_COLOR));
   } catch {
     return false;
   }
-
-  const write = options.write ?? ((line: string) => process.stdout.write(line));
-  write(formatInvite(url, !env.NO_COLOR));
   return true;
 }
 
@@ -69,21 +71,4 @@ function formatInvite(url: string, colour: boolean): string {
     `  ${style("2", "You see this note once. SHOWPIECE_NO_INVITE=1 turns it off.")}`,
     "",
   ].join("\n");
-}
-
-async function readState(path: string): Promise<Record<string, unknown>> {
-  let text: string;
-  try {
-    text = await readFile(path, "utf8");
-  } catch {
-    return {};
-  }
-  try {
-    const parsed: unknown = JSON.parse(text);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
-  } catch {
-    return {};
-  }
 }

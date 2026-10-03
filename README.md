@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Your app changed. Your Play Store screenshots did not.</strong><br/>
-  One command captures, frames and publishes them. 📸
+  Capture, frame and publish them from the terminal, with one config file. 📸
 </p>
 
 <p align="center">
@@ -515,9 +515,9 @@ showpiece is young, and what I build next depends on how you make store screensh
 
 ### The invitation in the CLI
 
-After the first successful `frame` or `publish` on a machine, showpiece prints one line with the link to the call. It prints the line once per machine and sends no data. It records that it showed the line in `$XDG_CONFIG_HOME/showpiece/state.json` (or `~/.config/showpiece/state.json`).
+After the first successful `frame` or `publish` on a machine, showpiece prints a short note with the link to the call. It prints the note once per machine and sends no data. It records that it showed the note in `$XDG_CONFIG_HOME/showpiece/state.json` (or `~/.config/showpiece/state.json`).
 
-showpiece does not print the line when `CI` is set or when the output is not a terminal. To turn it off, set `SHOWPIECE_NO_INVITE=1`.
+showpiece does not print the note when `CI` is set or when the output is not a terminal. To turn it off, set `SHOWPIECE_NO_INVITE=1`.
 
 ## Contributing
 
