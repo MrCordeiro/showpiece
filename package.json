@@ -1,6 +1,6 @@
 {
   "name": "showpiece",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Play Store screenshot pipeline CLI: capture with Maestro, frame with sharp, publish via the Google Play Developer API.",
   "type": "module",
   "license": "MIT",
